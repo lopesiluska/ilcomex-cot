@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cotação ILG COMEX</title>
+<script src="https://cdn.tailwindcss.com/3.4.16"></script>
+<script>tailwind.config={theme:{extend:{colors:{primary:'#0066CC',secondary:'#FF9900'},borderRadius:{'none':'0px','sm':'4px',DEFAULT:'8px','md':'12px','lg':'16px','xl':'20px','2xl':'24px','3xl':'32px','full':'9999px','button':'8px'}}}}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.6.0/remixicon.min.css">
+<style>
+:where([class^="ri-"])::before { content: "\f3c2"; }
+body {
+font-family: 'Poppins', sans-serif;
+background-color: #f8f9fa;
+}
+@media (min-width: 1024px) {
+.box-container {
+padding: 1.5rem;
+}
+.input-group input, .input-group select {
+height: 3.5rem;
+}
+.input-group i {
+font-size: 1.25rem;
+}
+}
+.input-group {
+position: relative;
+}
+.input-group i {
+position: absolute;
+left: 12px;
+top: 50%;
+transform: translateY(-50%);
+color: #6b7280;
+}
+.input-group input, .input-group select {
+padding-left: 40px;
+}
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+-webkit-appearance: none;
+margin: 0;
+}
+input[type=number] {
+-moz-appearance: textfield;
+}
+.box-container {
+border: 1px solid #e5e7eb;
+border-radius: 8px;
+transition: all 0.3s ease;
+}
+.box-container:hover {
+box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+</style>
+</head>
+<body class="bg-gray-50">
+<div class="min-h-screen flex flex-col" style="max-width: 1200px; margin: 0 auto;">
+<div class="w-full lg:max-w-[800px] mx-auto">
+<!-- Cabeçalho -->
+<header class="fixed w-full top-0 bg-white shadow-sm z-10 px-4 py-3 flex justify-center items-center" style="max-width: 1200px; left: 50%; transform: translateX(-50%);">
+<img src="https://static.readdy.ai/image/5842b1dc28a7352a4cae0d6857faa04d/23154532cc4a5e0f496c49dc6abc94b1.png" alt="ILG COMEX" class="h-8">
+</header>
+<!-- Conteúdo principal -->
+<main class="flex-grow pt-16 pb-20 px-4 lg:px-0">
+<form id="cotacaoForm" class="space-y-6 mt-4">
+<!-- Título do formulário -->
+<div class="text-center">
+<h2 class="text-xl font-semibold text-gray-800">Solicitar Cotação</h2>
+<p class="text-sm text-gray-600 mt-1">Preencha os dados para receber sua cotação</p>
+</div>
+<!-- Seção Origem -->
+<div class="bg-white p-4 rounded shadow-sm">
+<h3 class="text-lg font-medium text-primary mb-3 flex items-center">
+<div class="w-6 h-6 flex items-center justify-center mr-2 bg-primary rounded-full text-white">
+<i class="ri-map-pin-line text-sm"></i>
+</div>
+Origem
+</h3>
+<div class="space-y-4">
+<div class="input-group">
+<i class="ri-mail-line"></i>
+<input type="text" id="cep" name="cep" placeholder="CEP" class="w-full h-12 pl-10 pr-4 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" required>
+</div>
+<div class="input-group">
+<i class="ri-building-line"></i>
+<input type="text" id="cidade" name="cidade" placeholder="Cidade" class="w-full h-12 pl-10 pr-4 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-gray-100" readonly>
+</div>
+<div class="input-group">
+<i class="ri-map-2-line"></i>
+<input type="text" id="estado" name="estado" placeholder="Estado" class="w-full h-12 pl-10 pr-4 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-gray-100" readonly>
+</div>
+<div class="input-group">
+<i class="ri-flag-line"></i>
+<input type="text" id="pais" name="pais" value="Brasil" class="w-full h-12 pl-10 pr-4 border border-gray-300 rounded bg-gray-100" readonly>
+</div>
+</div>
+</div>
+<!-- Seção Destino -->
+<div class="bg-white p-4 rounded shadow-sm">
+<h3 class="text-lg font-medium text-primary mb-3 flex items-center">
+<div class="w-6 h-6 flex items-center justify-center mr-2 bg-primary rounded-full text-white">
+<i class="ri-flight-takeoff-line text-sm"></i>
+</div>
+Destino
+</h3>
+<div class="space-y-4">
+<div class="input-group">
+<i class="ri-building-line"></i>
+<input type="text" id="cidadeDestino" name="cidadeDestino" placeholder="Cidade" class="w-full h-12 pl-10 pr-4 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" required>
+</div>
+<div class="input-group">
+<i class="ri-map-2-line"></i>
+<input type="text" id="estadoDestino" name="estadoDestino" placeholder="Estado/Província" class="w-full h-12 pl-10 pr-4 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" required>
+</div>
+<div class="input-group">
+<i class="ri-mail-line"></i>
+<input type="text" id="cepDestino" name="cepDestino" placeholder="Código Postal" class="w-full h-12 pl-10 pr-4 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" required>
+</div>
+<div class="input-group">
+<i class="ri-flag-line"></i>
+<select id="paisDestino" name="paisDestino" class="w-full h-12 pl-10 pr-4 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" required>
+<option value="" disabled selected>Selecione o país</option>
+</select>
+</div>
+</div>
+</div>
+<!-- Seção Dados da(s) Caixa(s) -->
+<div class="bg-white p-4 rounded shadow-sm">
+<h3 class="text-lg font-medium text-primary mb-3 flex items-center">
+<div class="w-6 h-6 flex items-center justify-center mr-2 bg-primary rounded-full text-white">
+<i class="ri-box-3-line text-sm"></i>
+</div>
+Dados da(s) Caixa(s)
+</h3>
+<div id="caixasContainer">
+<div class="box-container p-3 mb-4">
+<div class="flex justify-between items-center mb-2">
+<h4 class="font-medium text-gray-700">Caixa 1</h4>
+<button type="button" class="text-red-500 hover:text-red-700 hidden remove-box">
+<i class="ri-delete-bin-line ri-lg"></i>
+</button>
+</div>
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+<div class="input-group">
+<i class="ri-arrow-up-down-line"></i>
+<input type="number" name="altura[]" placeholder="Altura (cm)" class="w-full h-12 pl-10 pr-4 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent dimensao" required>
+</div>
+<div class="input-group">
+<i class="ri-arrow-left-right-line"></i>
+<input type="number" name="largura[]" placeholder="Largura (cm)" class="w-full h-12 pl-10 pr-4 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent dimensao" required>
+</div>
+<div class="input-group">
+<i class="ri-ruler-line"></i>
+<input type="number" name="comprimento[]" placeholder="Comprimento (cm)" class="w-full h-12 pl-10 pr-4 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent dimensao" required>
+</div>
+<div class="input-group">
+<i class="ri-scales-3-line"></i>
+<input type="number" name="peso[]" placeholder="Peso (kg)" class="w-full h-12 pl-10 pr-4 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent peso" required>
+</div>
+</div>
+</div>
+</div>
+<button type="button" id="adicionarCaixa" class="w-full flex items-center justify-center space-x-2 py-3 bg-white border border-primary text-primary rounded-button hover:bg-primary/10 transition-colors cursor-pointer">
+<i class="ri-add-line ri-lg"></i>
+<span>Adicionar mais uma caixa</span>
+</button>
+<!-- Resumo dos cálculos -->
+<div class="mt-5 space-y-3">
+<div class="flex justify-between items-center p-3 bg-gray-50 rounded">
+<span class="text-sm text-gray-700">Peso Bruto Total:</span>
+<span id="pesoBruto" class="font-medium">0 kg</span>
+</div>
+<div class="flex justify-between items-center p-3 bg-gray-50 rounded">
+<span class="text-sm text-gray-700">Peso Cubado:</span>
+<span id="pesoCubado" class="font-medium">0 kg</span>
+</div>
+<div class="flex justify-between items-center p-3 bg-primary/10 rounded">
+<span class="text-sm font-medium text-primary">Peso Considerado:</span>
+<span id="pesoConsiderado" class="font-medium text-primary">0 kg</span>
+</div>
+</div>
+<!-- Alerta de cubagem -->
+<div id="alertaCubagem" class="hidden mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
+<div class="flex">
+<div class="flex-shrink-0">
+<i class="ri-information-line ri-lg"></i>
+</div>
+<div class="ml-3">
+<p>Sua remessa parece volumosa. Consulte especialista ILG COMEX para otimizar espaços e custos.</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Seção Valor Declarado -->
+<div class="bg-white p-4 rounded shadow-sm">
+<h3 class="text-lg font-medium text-primary mb-3 flex items-center">
+<div class="w-6 h-6 flex items-center justify-center mr-2 bg-primary rounded-full text-white">
+<i class="ri-money-dollar-circle-line text-sm"></i>
+</div>
+Valor Declarado
+</h3>
+<div class="input-group">
+<i class="ri-money-dollar-circle-line"></i>
+<input type="text" id="valorDeclarado" name="valorDeclarado" placeholder="R$ 0,00" class="w-full h-12 pl-10 pr-4 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" required>
+</div>
+<div class="mt-4 space-y-2">
+<div class="input-group">
+<i class="ri-shield-line"></i>
+<select id="seguro" name="seguro" class="w-full h-12 pl-10 pr-4 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" required>
+<option value="" disabled selected>Adicionar o Seguro do envio?</option>
+<option value="sim">Sim</option>
+<option value="nao">Não</option>
+</select>
+</div>
+<p id="mensagemSeguro" class="text-sm text-gray-600 hidden"></p>
+</div>
+</div>
+<!-- Botão Enviar -->
+<button type="submit" class="w-full py-4 bg-primary text-white font-medium rounded-button hover:bg-primary/90 transition-colors cursor-pointer">
+Solicitar Cotação
+</button>
+</form>
+</main>
+<!-- Rodapé -->
+<footer class="fixed bottom-0 w-full bg-white border-t border-gray-200 px-4 py-3 text-center" style="max-width: 1200px; left: 50%; transform: translateX(-50%);">
+<p class="text-xs text-gray-600">ILG COMEX – Soluções Inteligentes em Logística Internacional</p>
+<div class="flex justify-center space-x-4 mt-2">
+<a href="https://api.whatsapp.com/send?phone=5562998666000" target="_blank" class="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-primary cursor-pointer">
+<i class="ri-whatsapp-line ri-lg"></i>
+</a>
+<a href="https://www.instagram.com/ilgcomex/" target="_blank" class="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-primary cursor-pointer">
+<i class="ri-instagram-line ri-lg"></i>
+</a>
+<a href="https://www.facebook.com/ilgcomex" target="_blank" class="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-primary cursor-pointer">
+<i class="ri-facebook-line ri-lg"></i>
+</a>
+<a href="https://www.linkedin.com/company/ilgcomex/" target="_blank" class="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-primary cursor-pointer">
+<i class="ri-linkedin-line ri-lg"></i>
+</a>
+<a href="https://ilgcomex.com/" target="_blank" class="w-8 h-8 flex items-center justify-center text-gray-600 hover:text-primary cursor-pointer">
+<i class="ri-global-line ri-lg"></i>
+</a>
+</div>
+</footer>
+<!-- Tela de agradecimento (inicialmente oculta) -->
+<div id="agradecimento" class="fixed inset-0 bg-white z-20 flex flex-col items-center justify-center px-4 hidden" style="max-width: 1200px; left: 50%; transform: translateX(-50%);">
+<div class="w-full max-w-[600px]">
+<div class="text-center mb-6">
+<div class="w-16 h-16 mx-auto bg-green-100 rounded-full flex items-center justify-center mb-4">
+<i class="ri-check-line ri-2x text-green-500"></i>
+</div>
+<h2 class="text-xl font-semibold text-gray-800">Obrigado!</h2>
+<p class="text-sm text-gray-600 mt-1">Em breve você receberá sua cotação via WhatsApp.</p>
+</div>
+<div class="bg-gray-50 w-full p-4 rounded-lg mb-6">
+<h3 class="text-sm font-medium text-gray-700 mb-3">Resumo da sua solicitação:</h3>
+<div class="space-y-2 text-sm">
+<div class="flex justify-between">
+<span class="text-gray-600">Origem:</span>
+<span id="resumoOrigem" class="font-medium"></span>
+</div>
+<div class="flex justify-between">
+<span class="text-gray-600">Destino:</span>
+<span id="resumoDestino" class="font-medium"></span>
+</div>
+<div class="flex justify-between">
+<span class="text-gray-600">Total de caixas:</span>
+<span id="resumoCaixas" class="font-medium"></span>
+</div>
+<div class="flex justify-between">
+<span class="text-gray-600">Peso considerado:</span>
+<span id="resumoPeso" class="font-medium"></span>
+</div>
+<div class="flex justify-between">
+<span class="text-gray-600">Valor declarado:</span>
+<span id="resumoValor" class="font-medium"></span>
+</div>
+</div>
+</div>
+<div class="w-full">
+<a href="#" id="linkWhatsApp" class="w-full flex items-center justify-center space-x-2 py-3 bg-green-500 text-white rounded-button hover:bg-green-600 transition-colors cursor-pointer">
+<i class="ri-whatsapp-line ri-lg"></i>
+<span>Retornar ao atendimento ILG COMEX</span>
+</a>
+</div>
+</div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+// Lista de países
+const paises = [
+"África do Sul", "Alemanha", "Argentina", "Austrália", "Bélgica", "Bolívia",
+"Canadá", "Chile", "China", "Colômbia", "Coreia do Sul", "Dinamarca",
+"Equador", "Espanha", "Estados Unidos", "França", "Grécia", "Holanda",
+"Índia", "Indonésia", "Irlanda", "Itália", "Japão", "México",
+"Noruega", "Nova Zelândia", "Paraguai", "Peru", "Portugal", "Reino Unido",
+"Rússia", "Suécia", "Suíça", "Tailândia", "Turquia", "Uruguai", "Venezuela"
+];
+// Preencher o dropdown de países
+const paisesSelect = document.getElementById('paisDestino');
+paises.forEach(pais => {
+const option = document.createElement('option');
+option.value = pais;
+option.textContent = pais;
+paisesSelect.appendChild(option);
+});
+// Buscar CEP via API ViaCEP
+const cepInput = document.getElementById('cep');
+cepInput.addEventListener('blur', function() {
+const cep = this.value.replace(/\D/g, '');
+if (cep.length !== 8) {
+return;
+}
+fetch(`https://viacep.com.br/ws/${cep}/json/`)
+.then(response => response.json())
+.then(data => {
+if (!data.erro) {
+document.getElementById('cidade').value = data.localidade;
+document.getElementById('estado').value = data.uf;
+} else {
+alert('CEP não encontrado');
+document.getElementById('cidade').value = '';
+document.getElementById('estado').value = '';
+}
+})
+.catch(error => {
+console.error('Erro ao buscar CEP:', error);
+});
+});
+// Formatação de valor monetário
+const valorDeclaradoInput = document.getElementById('valorDeclarado');
+valorDeclaradoInput.addEventListener('input', function() {
+let value = this.value.replace(/\D/g, '');
+if (value === '') {
+this.value = '';
+return;
+}
+value = (parseInt(value) / 100).toFixed(2);
+this.value = `R$ ${value.replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
+});
+// Adicionar caixa
+let contadorCaixas = 1;
+const adicionarCaixaBtn = document.getElementById('adicionarCaixa');
+const caixasContainer = document.getElementById('caixasContainer');
+adicionarCaixaBtn.addEventListener('click', function() {
+contadorCaixas++;
+const novaCaixa = document.createElement('div');
+novaCaixa.className = 'box-container p-3 mb-4';
+novaCaixa.innerHTML = `
+<div class="flex justify-between items-center mb-2">
+<h4 class="font-medium text-gray-700">Caixa ${contadorCaixas}</h4>
+<button type="button" class="text-red-500 hover:text-red-700 remove-box">
+<i class="ri-delete-bin-line ri-lg"></i>
+</button>
+</div>
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+<div class="input-group">
+<i class="ri-arrow-up-down-line"></i>
+<input type="number" name="altura[]" placeholder="Altura (cm)" class="w-full h-12 pl-10 pr-4 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent dimensao" required>
+</div>
+<div class="input-group">
+<i class="ri-arrow-left-right-line"></i>
+<input type="number" name="largura[]" placeholder="Largura (cm)" class="w-full h-12 pl-10 pr-4 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent dimensao" required>
+</div>
+<div class="input-group">
+<i class="ri-ruler-line"></i>
+<input type="number" name="comprimento[]" placeholder="Comprimento (cm)" class="w-full h-12 pl-10 pr-4 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent dimensao" required>
+</div>
+<div class="input-group">
+<i class="ri-scales-3-line"></i>
+<input type="number" name="peso[]" placeholder="Peso (kg)" class="w-full h-12 pl-10 pr-4 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent peso" required>
+</div>
+</div>
+`;
+caixasContainer.appendChild(novaCaixa);
+// Mostrar botão de remover para a primeira caixa quando houver mais de uma
+if (contadorCaixas === 2) {
+document.querySelector('.remove-box').classList.remove('hidden');
+}
+// Adicionar event listener para os novos inputs
+const novosDimensaoInputs = novaCaixa.querySelectorAll('.dimensao');
+novosDimensaoInputs.forEach(input => {
+input.addEventListener('input', calcularPesos);
+});
+const novosPesoInputs = novaCaixa.querySelectorAll('.peso');
+novosPesoInputs.forEach(input => {
+input.addEventListener('input', calcularPesos);
+});
+// Adicionar event listener para o botão de remover
+const removeBtn = novaCaixa.querySelector('.remove-box');
+removeBtn.addEventListener('click', function() {
+novaCaixa.remove();
+contadorCaixas--;
+// Atualizar numeração das caixas
+const caixas = caixasContainer.querySelectorAll('.box-container');
+caixas.forEach((caixa, index) => {
+caixa.querySelector('h4').textContent = `Caixa ${index + 1}`;
+});
+// Esconder botão de remover da primeira caixa se for a única
+if (contadorCaixas === 1) {
+document.querySelector('.remove-box').classList.add('hidden');
+}
+calcularPesos();
+});
+});
+// Calcular pesos
+function calcularPesos() {
+let pesoBrutoTotal = 0;
+let pesoCubadoTotal = 0;
+const caixas = caixasContainer.querySelectorAll('.box-container');
+caixas.forEach(caixa => {
+const altura = parseFloat(caixa.querySelector('input[name="altura[]"]').value) || 0;
+const largura = parseFloat(caixa.querySelector('input[name="largura[]"]').value) || 0;
+const comprimento = parseFloat(caixa.querySelector('input[name="comprimento[]"]').value) || 0;
+const peso = parseFloat(caixa.querySelector('input[name="peso[]"]').value) || 0;
+pesoBrutoTotal += peso;
+const pesoCubado = (altura * largura * comprimento) / 5000;
+pesoCubadoTotal += pesoCubado;
+});
+const pesoConsiderado = Math.max(pesoBrutoTotal, pesoCubadoTotal);
+document.getElementById('pesoBruto').textContent = `${pesoBrutoTotal.toFixed(2)} kg`;
+document.getElementById('pesoCubado').textContent = `${pesoCubadoTotal.toFixed(2)} kg`;
+document.getElementById('pesoConsiderado').textContent = `${pesoConsiderado.toFixed(2)} kg`;
+// Mostrar alerta de cubagem se necessário
+const alertaCubagem = document.getElementById('alertaCubagem');
+if (pesoCubadoTotal > pesoBrutoTotal) {
+alertaCubagem.classList.remove('hidden');
+} else {
+alertaCubagem.classList.add('hidden');
+}
+}
+// Adicionar event listeners para os inputs iniciais
+const dimensaoInputs = document.querySelectorAll('.dimensao');
+dimensaoInputs.forEach(input => {
+input.addEventListener('input', calcularPesos);
+});
+const pesoInputs = document.querySelectorAll('.peso');
+pesoInputs.forEach(input => {
+input.addEventListener('input', calcularPesos);
+});
+// Envio do formulário
+const form = document.getElementById('cotacaoForm');
+form.addEventListener('submit', function(e) {
+e.preventDefault();
+// Gerar protocolo único
+const protocolo = `ILG${Date.now().toString().slice(-6)}`;
+// Preencher resumo
+document.getElementById('resumoOrigem').textContent = `${document.getElementById('cidade').value}/${document.getElementById('estado').value}`;
+document.getElementById('resumoDestino').textContent = `${document.getElementById('cidadeDestino').value}/${document.getElementById('paisDestino').value}`;
+document.getElementById('resumoCaixas').textContent = contadorCaixas;
+document.getElementById('resumoPeso').textContent = document.getElementById('pesoConsiderado').textContent;
+document.getElementById('resumoValor').textContent = document.getElementById('valorDeclarado').value;
+// Configurar link do WhatsApp
+const mensagemWhatsApp = `Minha solicitação de cotação é ${protocolo}`;
+document.getElementById('linkWhatsApp').href = `https://wa.me/5500000000000?text=${encodeURIComponent(mensagemWhatsApp)}`;
+// Mostrar tela de agradecimento
+document.getElementById('agradecimento').classList.remove('hidden');
+// Aqui seria implementada a integração com respond.io e Bitrix24
+// Exemplo de dados a serem enviados:
+const dadosCotacao = {
+protocolo: protocolo,
+origem: {
+cep: document.getElementById('cep').value,
+cidade: document.getElementById('cidade').value,
+estado: document.getElementById('estado').value,
+pais: 'Brasil'
+},
+destino: {
+cidade: document.getElementById('cidadeDestino').value,
+estado: document.getElementById('estadoDestino').value,
+cep: document.getElementById('cepDestino').value,
+pais: document.getElementById('paisDestino').value
+},
+caixas: Array.from(caixasContainer.querySelectorAll('.box-container')).map((caixa, index) => ({
+numero: index + 1,
+altura: caixa.querySelector('input[name="altura[]"]').value,
+largura: caixa.querySelector('input[name="largura[]"]').value,
+comprimento: caixa.querySelector('input[name="comprimento[]"]').value,
+peso: caixa.querySelector('input[name="peso[]"]').value
+})),
+pesoBruto: document.getElementById('pesoBruto').textContent,
+pesoCubado: document.getElementById('pesoCubado').textContent,
+pesoConsiderado: document.getElementById('pesoConsiderado').textContent,
+valorDeclarado: document.getElementById('valorDeclarado').value,
+dataHora: new Date().toISOString()
+};
+const bitrixData = {
+fields: {
+TITLE: `Cotação ${protocolo}`,
+NAME: `Cotação de Frete Internacional`,
+TYPE_ID: "QUOTE",
+STAGE_ID: "NEW",
+OPENED: "Y",
+ASSIGNED_BY_ID: 1,
+CURRENCY_ID: "BRL",
+OPPORTUNITY: parseFloat(dadosCotacao.valorDeclarado.replace(/[^\d,]/g, '').replace(',', '.')),
+COMMENTS: `
+Origem: ${dadosCotacao.origem.cidade}/${dadosCotacao.origem.estado} - ${dadosCotacao.origem.cep}
+Destino: ${dadosCotacao.destino.cidade}/${dadosCotacao.destino.pais} - ${dadosCotacao.destino.cep}
+Total de Volumes: ${dadosCotacao.caixas.length}
+Peso Bruto: ${dadosCotacao.pesoBruto}
+Peso Cubado: ${dadosCotacao.pesoCubado}
+Peso Considerado: ${dadosCotacao.pesoConsiderado}
+Valor Declarado: ${dadosCotacao.valorDeclarado}
+Seguro: ${document.getElementById('seguro').value === 'sim' ? 'Sim' : 'Não'}
+`,
+UF_CRM_ORIGEM_CEP: dadosCotacao.origem.cep,
+UF_CRM_ORIGEM_CIDADE: dadosCotacao.origem.cidade,
+UF_CRM_ORIGEM_ESTADO: dadosCotacao.origem.estado,
+UF_CRM_ORIGEM_PAIS: dadosCotacao.origem.pais,
+UF_CRM_DESTINO_CIDADE: dadosCotacao.destino.cidade,
+UF_CRM_DESTINO_ESTADO: dadosCotacao.destino.estado,
+UF_CRM_DESTINO_CEP: dadosCotacao.destino.cep,
+UF_CRM_DESTINO_PAIS: dadosCotacao.destino.pais,
+UF_CRM_PESO_BRUTO: parseFloat(dadosCotacao.pesoBruto),
+UF_CRM_PESO_CUBADO: parseFloat(dadosCotacao.pesoCubado),
+UF_CRM_PESO_CONSIDERADO: parseFloat(dadosCotacao.pesoConsiderado),
+UF_CRM_VALOR_DECLARADO: parseFloat(dadosCotacao.valorDeclarado.replace(/[^\d,]/g, '').replace(',', '.')),
+UF_CRM_SEGURO: document.getElementById('seguro').value === 'sim' ? 'Y' : 'N',
+UF_CRM_DATA_COTACAO: new Date().toISOString(),
+UF_CRM_PROTOCOLO: protocolo
+}
+};
+console.log('Dados para integração:', dadosCotacao);
+console.log('Dados para Bitrix24:', bitrixData);
+console.log('Dados para integração:', dadosCotacao);
+// Simulação de envio para webhook
+// fetch('https://webhook.site/seu-endpoint', {
+//     method: 'POST',
+//     headers: {
+//         'Content-Type': 'application/json',
+//     },
+//     body: JSON.stringify(dadosCotacao)
+// })
+// .then(response => response.json())
+// .then(data => console.log('Sucesso:', data))
+// .catch(error => console.error('Erro:', error));
+});
+// Adicionar event listener para o select de seguro
+document.getElementById('seguro').addEventListener('change', function() {
+const mensagemSeguro = document.getElementById('mensagemSeguro');
+mensagemSeguro.classList.remove('hidden');
+if (this.value === 'sim') {
+mensagemSeguro.textContent = 'O Valor Declarado é o valor assegurado de dano, perca ou extravio';
+} else if (this.value === 'nao') {
+mensagemSeguro.textContent = 'Em caso de dano, perca ou extravio, não haverá ressarcimento.';
+}
+});
+// Botão retornar
+document.getElementById('linkWhatsApp').addEventListener('click', function() {
+document.getElementById('agradecimento').classList.add('hidden');
+form.reset();
+calcularPesos();
+// Resetar contagem de caixas
+while (contadorCaixas > 1) {
+caixasContainer.removeChild(caixasContainer.lastChild);
+contadorCaixas--;
+}
+document.getElementById('cidade').value = '';
+document.getElementById('estado').value = '';
+document.getElementById('mensagemSeguro').classList.add('hidden');
+});
+});
+</script>
+</body>
+</html>
