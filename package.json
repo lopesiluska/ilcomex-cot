@@ -1,0 +1,6 @@
+{
+  "name": "ilg-comex-site",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Site estático ILG + API de encaminhamento da cotação para webhook"
+}
