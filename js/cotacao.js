@@ -1,0 +1,627 @@
+/**
+ * Formulário de cotação ILG COMEX — lógica de UI, máscaras, ViaCEP e envio (API/Vercel ou webhook direto).
+ * Configure ILG_COTACAO_CONFIG no HTML antes deste script.
+ */
+(function () {
+  "use strict";
+
+  const CFG = window.ILG_COTACAO_CONFIG || {};
+
+  const PAIS_LIST = [
+    "África do Sul",
+    "Alemanha",
+    "Argentina",
+    "Austrália",
+    "Bélgica",
+    "Bolívia",
+    "Canadá",
+    "Chile",
+    "China",
+    "Colômbia",
+    "Coreia do Sul",
+    "Dinamarca",
+    "Equador",
+    "Espanha",
+    "Estados Unidos",
+    "França",
+    "Grécia",
+    "Holanda",
+    "Índia",
+    "Indonésia",
+    "Irlanda",
+    "Itália",
+    "Japão",
+    "México",
+    "Noruega",
+    "Nova Zelândia",
+    "Paraguai",
+    "Peru",
+    "Portugal",
+    "Reino Unido",
+    "Rússia",
+    "Suécia",
+    "Suíça",
+    "Tailândia",
+    "Turquia",
+    "Uruguai",
+    "Venezuela",
+  ];
+
+  function onlyDigits(s) {
+    return String(s || "").replace(/\D/g, "");
+  }
+
+  /** CEP brasileiro: 00000-000 */
+  function maskCep(value) {
+    const d = onlyDigits(value).slice(0, 8);
+    if (d.length <= 5) return d;
+    return d.slice(0, 5) + "-" + d.slice(5);
+  }
+
+  /** Telefone BR: (00) 0000-0000 ou (00) 00000-0000 */
+  function maskPhoneBR(value) {
+    const d = onlyDigits(value).slice(0, 11);
+    if (d.length === 0) return "";
+    if (d.length <= 2) return "(" + d;
+    if (d.length <= 6) return "(" + d.slice(0, 2) + ") " + d.slice(2);
+    if (d.length <= 10)
+      return "(" + d.slice(0, 2) + ") " + d.slice(2, 6) + "-" + d.slice(6);
+    return (
+      "(" +
+      d.slice(0, 2) +
+      ") " +
+      d.slice(2, 7) +
+      "-" +
+      d.slice(7, 11)
+    );
+  }
+
+  /** Real brasileiro a partir de dígitos (centavos) */
+  function formatBRLFromDigits(centsDigits) {
+    if (!centsDigits) return "";
+    const n = parseInt(centsDigits, 10);
+    if (!n && n !== 0) return "";
+    const reais = (n / 100).toFixed(2);
+    const [intPart, frac] = reais.split(".");
+    const intFmt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    return "R$ " + intFmt + "," + frac;
+  }
+
+  function parseBRLToNumber(str) {
+    const d = onlyDigits(str);
+    if (!d) return 0;
+    return parseInt(d, 10) / 100;
+  }
+
+  function formatKg(n) {
+    return (
+      n.toLocaleString("pt-BR", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }) + " kg"
+    );
+  }
+
+  /** Interpreta texto exibido na UI (ex.: "1.234,56 kg"). */
+  function parseKgFromUi(text) {
+    const t = String(text)
+      .replace(/\s*kg\s*$/i, "")
+      .trim();
+    if (!t) return 0;
+    return parseFloat(t.replace(/\./g, "").replace(",", ".")) || 0;
+  }
+
+  function debounce(fn, ms) {
+    let t;
+    return function () {
+      const args = arguments;
+      clearTimeout(t);
+      t = setTimeout(function () {
+        fn.apply(null, args);
+      }, ms);
+    };
+  }
+
+  async function enviarApiCotacao(protocolo, dados, bitrixPayload) {
+    const url = (CFG.apiSubmitUrl || "").trim();
+    if (!url) return { skipped: true };
+    const body = {
+      protocolo,
+      dados,
+      ...(bitrixPayload ? { bitrix: bitrixPayload } : {}),
+    };
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(json.error || "Erro " + res.status);
+    }
+    return json;
+  }
+
+  function getCaixas(caixasContainer) {
+    return Array.from(caixasContainer.querySelectorAll(".box-card"));
+  }
+
+  function renumberBoxes(caixasContainer) {
+    getCaixas(caixasContainer).forEach(function (el, i) {
+      const h = el.querySelector(".box-card__title");
+      if (h) h.textContent = "Caixa " + (i + 1);
+    });
+    const first = caixasContainer.querySelector(".btn-remove");
+    const n = getCaixas(caixasContainer).length;
+    if (first) {
+      if (n <= 1) first.classList.add("hidden");
+      else first.classList.remove("hidden");
+    }
+  }
+
+  function calcularPesos(caixasContainer, els) {
+    let pesoBrutoTotal = 0;
+    let pesoCubadoTotal = 0;
+    getCaixas(caixasContainer).forEach(function (caixa) {
+      const alt =
+        parseFloat(caixa.querySelector('input[name="altura[]"]').value) || 0;
+      const larg =
+        parseFloat(caixa.querySelector('input[name="largura[]"]').value) || 0;
+      const comp =
+        parseFloat(caixa.querySelector('input[name="comprimento[]"]').value) ||
+        0;
+      const peso =
+        parseFloat(caixa.querySelector('input[name="peso[]"]').value) || 0;
+      pesoBrutoTotal += peso;
+      pesoCubadoTotal += (alt * larg * comp) / 5000;
+    });
+    const pesoConsiderado = Math.max(pesoBrutoTotal, pesoCubadoTotal);
+    els.pesoBruto.textContent = formatKg(pesoBrutoTotal);
+    els.pesoCubado.textContent = formatKg(pesoCubadoTotal);
+    els.pesoConsiderado.textContent = formatKg(pesoConsiderado);
+    if (pesoCubadoTotal > pesoBrutoTotal)
+      els.alertaCubagem.classList.add("is-visible");
+    else els.alertaCubagem.classList.remove("is-visible");
+ }
+
+  function collectFormData(form, caixasContainer) {
+    const fd = new FormData(form);
+    const caixas = getCaixas(caixasContainer).map(function (caixa, index) {
+      return {
+        numero: index + 1,
+        altura: caixa.querySelector('input[name="altura[]"]').value,
+        largura: caixa.querySelector('input[name="largura[]"]').value,
+        comprimento: caixa.querySelector('input[name="comprimento[]"]').value,
+        peso: caixa.querySelector('input[name="peso[]"]').value,
+      };
+    });
+    const pesoBrutoText = document.getElementById("pesoBruto").textContent;
+    const pesoCubadoText = document.getElementById("pesoCubado").textContent;
+    const pesoConsideradoText =
+      document.getElementById("pesoConsiderado").textContent;
+
+    return {
+      protocolo: "",
+      contato: {
+        nome: (fd.get("nome") || "").trim(),
+        email: (fd.get("email") || "").trim(),
+        telefone: (fd.get("telefone") || "").trim(),
+        observacoes: (fd.get("observacoes") || "").trim(),
+      },
+      origem: {
+        cep: (fd.get("cep") || "").trim(),
+        cidade: (fd.get("cidade") || "").trim(),
+        estado: (fd.get("estado") || "").trim(),
+        pais: "Brasil",
+      },
+      destino: {
+        cidade: (fd.get("cidadeDestino") || "").trim(),
+        estado: (fd.get("estadoDestino") || "").trim(),
+        cep: (fd.get("cepDestino") || "").trim(),
+        pais: (fd.get("paisDestino") || "").trim(),
+      },
+      caixas: caixas,
+      pesoBruto: pesoBrutoText,
+      pesoCubado: pesoCubadoText,
+      pesoConsiderado: pesoConsideradoText,
+      valorDeclarado: (fd.get("valorDeclarado") || "").trim(),
+      valorDeclaradoNumero: parseBRLToNumber(fd.get("valorDeclarado")),
+      seguro: fd.get("seguro") || "",
+      dataHora: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Estrutura alinhada a campos customizados do Bitrix24 (ajuste UF_CRM_* ao seu CRM).
+   * Para crm.deal.add / crm.lead.add use o objeto `fields` conforme documentação REST.
+   */
+  function buildBitrixPayload(dados, protocolo) {
+    const seguroSim = dados.seguro === "sim";
+    const opportunity = dados.valorDeclaradoNumero;
+    const pesoBrutoNum = parseKgFromUi(dados.pesoBruto);
+    const pesoCubadoNum = parseKgFromUi(dados.pesoCubado);
+    const pesoConsideradoNum = parseKgFromUi(dados.pesoConsiderado);
+
+    const linesCaixas = dados.caixas
+      .map(function (c) {
+        return (
+          "  #" +
+          c.numero +
+          ": " +
+          c.altura +
+          "x" +
+          c.largura +
+          "x" +
+          c.comprimento +
+          " cm, " +
+          c.peso +
+          " kg"
+        );
+      })
+      .join("\n");
+
+    const comments =
+      "Contato: " +
+      dados.contato.nome +
+      " | " +
+      dados.contato.email +
+      " | " +
+      dados.contato.telefone +
+      "\n" +
+      "Origem: " +
+      dados.origem.cidade +
+      "/" +
+      dados.origem.estado +
+      " — CEP " +
+      dados.origem.cep +
+      "\n" +
+      "Destino: " +
+      dados.destino.cidade +
+      "/" +
+      dados.destino.estado +
+      " — " +
+      dados.destino.pais +
+      " — Postal " +
+      dados.destino.cep +
+      "\n" +
+      "Volumes:\n" +
+      linesCaixas +
+      "\n" +
+      "Peso bruto: " +
+      dados.pesoBruto +
+      "\n" +
+      "Peso cubado: " +
+      dados.pesoCubado +
+      "\n" +
+      "Peso considerado: " +
+      dados.pesoConsiderado +
+      "\n" +
+      "Valor declarado: " +
+      dados.valorDeclarado +
+      "\n" +
+      "Seguro: " +
+      (seguroSim ? "Sim" : "Não") +
+      (dados.contato.observacoes
+        ? "\nObs.: " + dados.contato.observacoes
+        : "");
+
+    return {
+      entityType: CFG.bitrixEntityType || "DEAL",
+      fields: {
+        TITLE: "Cotação " + protocolo + " — " + dados.contato.nome,
+        TYPE_ID: CFG.bitrixTypeId || "QUOTE",
+        STAGE_ID: CFG.bitrixStageId || "NEW",
+        OPENED: "Y",
+        ASSIGNED_BY_ID: CFG.bitrixAssignedById || 1,
+        CURRENCY_ID: "BRL",
+        OPPORTUNITY: opportunity,
+        COMMENTS: comments,
+        UF_CRM_PROTOCOLO: protocolo,
+        UF_CRM_ORIGEM_CEP: dados.origem.cep,
+        UF_CRM_ORIGEM_CIDADE: dados.origem.cidade,
+        UF_CRM_ORIGEM_ESTADO: dados.origem.estado,
+        UF_CRM_ORIGEM_PAIS: dados.origem.pais,
+        UF_CRM_DESTINO_CIDADE: dados.destino.cidade,
+        UF_CRM_DESTINO_ESTADO: dados.destino.estado,
+        UF_CRM_DESTINO_CEP: dados.destino.cep,
+        UF_CRM_DESTINO_PAIS: dados.destino.pais,
+        UF_CRM_PESO_BRUTO: pesoBrutoNum,
+        UF_CRM_PESO_CUBADO: pesoCubadoNum,
+        UF_CRM_PESO_CONSIDERADO: pesoConsideradoNum,
+        UF_CRM_VALOR_DECLARADO: opportunity,
+        UF_CRM_SEGURO: seguroSim ? "Y" : "N",
+        UF_CRM_DATA_COTACAO: dados.dataHora,
+        UF_CRM_CAIXAS_JSON: JSON.stringify(dados.caixas),
+      },
+    };
+  }
+
+  async function enviarBitrixWebhook(payload) {
+    const url = CFG.bitrixInboundWebhookUrl;
+    if (!url || typeof url !== "string") {
+      console.info(
+        "[ILG Cotação] Bitrix: defina ILG_COTACAO_CONFIG.bitrixInboundWebhookUrl para enviar automaticamente."
+      );
+      return { skipped: true };
+    }
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        event: "ilg.cotacao.submitted",
+        payload: payload,
+        // Alguns handlers esperam `fields` no topo:
+        fields: payload.fields,
+      }),
+    });
+    if (!res.ok) throw new Error("Bitrix webhook HTTP " + res.status);
+    const ct = res.headers.get("content-type") || "";
+    if (ct.includes("application/json")) return res.json();
+    return { ok: true, text: await res.text() };
+  }
+
+  function bindBoxCard(caixaEl, caixasContainer, els, calcFn) {
+    caixaEl.querySelectorAll(".dimensao, .peso").forEach(function (inp) {
+      inp.addEventListener("input", calcFn);
+    });
+    const removeBtn = caixaEl.querySelector(".btn-remove");
+    if (removeBtn) {
+      removeBtn.addEventListener("click", function () {
+        caixaEl.remove();
+        renumberBoxes(caixasContainer);
+        calcFn();
+      });
+    }
+  }
+
+  function createBoxTemplate(index) {
+    const wrap = document.createElement("div");
+    wrap.className = "box-card";
+    wrap.innerHTML =
+      '<div class="box-card__top">' +
+      '<h4 class="box-card__title">Caixa ' +
+      index +
+      '</h4>' +
+      '<button type="button" class="btn-remove" aria-label="Remover caixa">' +
+      '<i class="ri-delete-bin-line"></i>' +
+      "</button>" +
+      "</div>" +
+      '<div class="dim-grid">' +
+      '<div class="field"><label>Altura (cm)</label><div class="input-wrap">' +
+      '<i class="ri-arrow-up-down-line"></i>' +
+      '<input type="number" name="altura[]" class="dimensao" min="0" step="0.01" required placeholder="0">' +
+      "</div></div>" +
+      '<div class="field"><label>Largura (cm)</label><div class="input-wrap">' +
+      '<i class="ri-arrow-left-right-line"></i>' +
+      '<input type="number" name="largura[]" class="dimensao" min="0" step="0.01" required placeholder="0">' +
+      "</div></div>" +
+      '<div class="field"><label>Comprimento (cm)</label><div class="input-wrap">' +
+      '<i class="ri-ruler-line"></i>' +
+      '<input type="number" name="comprimento[]" class="dimensao" min="0" step="0.01" required placeholder="0">' +
+      "</div></div>" +
+      '<div class="field"><label>Peso (kg)</label><div class="input-wrap">' +
+      '<i class="ri-scales-3-line"></i>' +
+      '<input type="number" name="peso[]" class="peso" min="0" step="0.01" required placeholder="0">' +
+      "</div></div>" +
+      "</div>";
+    return wrap;
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    const form = document.getElementById("cotacaoForm");
+    const caixasContainer = document.getElementById("caixasContainer");
+    const paisSelect = document.getElementById("paisDestino");
+    const cepInput = document.getElementById("cep");
+    const cidadeInput = document.getElementById("cidade");
+    const estadoInput = document.getElementById("estado");
+    const cepStatus = document.getElementById("cepStatus");
+    const valorDeclaradoInput = document.getElementById("valorDeclarado");
+    const telefoneInput = document.getElementById("telefone");
+    const seguroSelect = document.getElementById("seguro");
+    const mensagemSeguro = document.getElementById("mensagemSeguro");
+    const modal = document.getElementById("modalAgradecimento");
+    const linkWhats = document.getElementById("linkWhatsApp");
+    const bitrixPreview = document.getElementById("bitrixPreview");
+
+    const els = {
+      pesoBruto: document.getElementById("pesoBruto"),
+      pesoCubado: document.getElementById("pesoCubado"),
+      pesoConsiderado: document.getElementById("pesoConsiderado"),
+      alertaCubagem: document.getElementById("alertaCubagem"),
+    };
+
+    PAIS_LIST.forEach(function (p) {
+      const o = document.createElement("option");
+      o.value = p;
+      o.textContent = p;
+      paisSelect.appendChild(o);
+    });
+
+    const calcFn = function () {
+      calcularPesos(caixasContainer, els);
+    };
+
+    getCaixas(caixasContainer).forEach(function (card) {
+      bindBoxCard(card, caixasContainer, els, calcFn);
+    });
+    renumberBoxes(caixasContainer);
+    calcFn();
+
+    document.getElementById("adicionarCaixa").addEventListener("click", function () {
+      const n = getCaixas(caixasContainer).length + 1;
+      const card = createBoxTemplate(n);
+      caixasContainer.appendChild(card);
+      bindBoxCard(card, caixasContainer, els, calcFn);
+      renumberBoxes(caixasContainer);
+      calcFn();
+    });
+
+    cepInput.addEventListener("input", function () {
+      const cur = cepInput.selectionStart;
+      const before = cepInput.value;
+      cepInput.value = maskCep(cepInput.value);
+      if (cepStatus) {
+        cepStatus.textContent = "";
+        cepStatus.className = "cep-status";
+      }
+    });
+
+    const buscarCep = debounce(function () {
+      const raw = onlyDigits(cepInput.value);
+      if (raw.length !== 8) return;
+      if (cepStatus) {
+        cepStatus.textContent = "…";
+        cepStatus.className = "cep-status is-loading";
+      }
+      fetch("https://viacep.com.br/ws/" + raw + "/json/")
+        .then(function (r) {
+          return r.json();
+        })
+        .then(function (data) {
+          if (data.erro) {
+            cidadeInput.value = "";
+            estadoInput.value = "";
+            if (cepStatus) {
+              cepStatus.textContent = "!";
+              cepStatus.className = "cep-status is-error";
+            }
+            return;
+          }
+          cidadeInput.value = data.localidade || "";
+          estadoInput.value = data.uf || "";
+          if (cepStatus) {
+            cepStatus.textContent = "";
+            cepStatus.className = "cep-status";
+          }
+        })
+        .catch(function (err) {
+          console.error(err);
+          if (cepStatus) {
+            cepStatus.textContent = "!";
+            cepStatus.className = "cep-status is-error";
+          }
+        });
+    }, 400);
+
+    cepInput.addEventListener("blur", buscarCep);
+
+    if (telefoneInput) {
+      telefoneInput.addEventListener("input", function () {
+        telefoneInput.value = maskPhoneBR(telefoneInput.value);
+      });
+    }
+
+    valorDeclaradoInput.addEventListener("input", function () {
+      const digits = onlyDigits(valorDeclaradoInput.value);
+      valorDeclaradoInput.value = formatBRLFromDigits(digits);
+    });
+
+    seguroSelect.addEventListener("change", function () {
+      mensagemSeguro.hidden = false;
+      if (seguroSelect.value === "sim")
+        mensagemSeguro.textContent =
+          "O valor declarado é o valor assegurado em caso de dano, perda ou extravio.";
+      else if (seguroSelect.value === "nao")
+        mensagemSeguro.textContent =
+          "Sem seguro, em caso de dano, perda ou extravio não haverá ressarcimento pelo valor declarado.";
+      else mensagemSeguro.hidden = true;
+    });
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      const protocolo =
+        (CFG.protocolPrefix || "ILG") +
+        String(Date.now()).slice(-8);
+
+      const dados = collectFormData(form, caixasContainer);
+      dados.protocolo = protocolo;
+
+      const bitrixPayload = buildBitrixPayload(dados, protocolo);
+
+      document.getElementById("resumoOrigem").textContent =
+        dados.origem.cidade + "/" + dados.origem.estado;
+      document.getElementById("resumoDestino").textContent =
+        dados.destino.cidade + "/" + dados.destino.pais;
+      document.getElementById("resumoCaixas").textContent = String(
+        dados.caixas.length
+      );
+      document.getElementById("resumoPeso").textContent =
+        dados.pesoConsiderado;
+      document.getElementById("resumoValor").textContent =
+        dados.valorDeclarado;
+      document.getElementById("resumoProtocolo").textContent = protocolo;
+
+      const waPhone = CFG.whatsappE164 || "5562998666000";
+      const waText =
+        CFG.whatsappMessageTemplate ||
+        "Olá! Minha solicitação de cotação é {protocolo}.";
+      const msg = waText.replace(/\{protocolo\}/g, protocolo);
+      linkWhats.href =
+        "https://api.whatsapp.com/send?phone=" +
+        onlyDigits(waPhone) +
+        "&text=" +
+        encodeURIComponent(msg);
+
+      if (bitrixPreview)
+        bitrixPreview.textContent = JSON.stringify(
+          { cotacao: dados, bitrix: bitrixPayload },
+          null,
+          2
+        );
+
+      console.log("[ILG Cotação] dados:", dados);
+      console.log("[ILG Cotação] bitrix:", bitrixPayload);
+
+      const resumoBitrixRow = document.getElementById("resumoBitrixCotacaoRow");
+      const resumoBitrix = document.getElementById("resumoBitrixCotacao");
+      if (resumoBitrixRow && resumoBitrix) {
+        resumoBitrixRow.style.display = "none";
+        resumoBitrix.textContent = "";
+      }
+
+      const apiUrl = (CFG.apiSubmitUrl || "").trim();
+      if (apiUrl) {
+        enviarApiCotacao(protocolo, dados, bitrixPayload)
+          .then(function (r) {
+            if (bitrixPreview) bitrixPreview.textContent = JSON.stringify(r, null, 2);
+            if (r && r.bitrixDealId && resumoBitrixRow && resumoBitrix) {
+              resumoBitrixRow.style.display = "";
+              resumoBitrix.textContent = "Negócio ID " + r.bitrixDealId;
+            }
+          })
+          .catch(function (err) {
+            alert(err.message || String(err));
+          });
+      } else {
+        enviarBitrixWebhook(bitrixPayload)
+          .then(function (r) {
+            if (r && !r.skipped) console.log("[ILG Cotação] Bitrix resposta:", r);
+          })
+          .catch(function (err) {
+            console.error("[ILG Cotação] Bitrix erro:", err);
+          });
+      }
+
+      modal.classList.add("is-open");
+      modal.setAttribute("aria-hidden", "false");
+    });
+
+    linkWhats.addEventListener("click", function () {
+      modal.classList.remove("is-open");
+      modal.setAttribute("aria-hidden", "true");
+      form.reset();
+      cidadeInput.value = "";
+      estadoInput.value = "";
+      mensagemSeguro.hidden = true;
+      if (cepStatus) {
+        cepStatus.textContent = "";
+        cepStatus.className = "cep-status";
+      }
+      while (getCaixas(caixasContainer).length > 1) {
+        caixasContainer.removeChild(caixasContainer.lastElementChild);
+      }
+      renumberBoxes(caixasContainer);
+      calcFn();
+    });
+  });
+})();

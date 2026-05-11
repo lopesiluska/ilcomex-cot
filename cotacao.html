@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cotação — ILG COMEX</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.6.0/remixicon.min.css">
+  <link rel="stylesheet" href="css/cotacao.css">
+  <script>
+    /**
+     * Integração webhook / Bitrix — preencha antes do go-live.
+     * apiSubmitUrl: na Vercel "/api/cotacao" (repassa ao webhook). Deixe "" para não chamar API.
+     * bitrixInboundWebhookUrl: POST direto do navegador (exige CORS no destino).
+     */
+    window.ILG_COTACAO_CONFIG = {
+      protocolPrefix: "ILG",
+      whatsappE164: "5562998666000",
+      whatsappMessageTemplate: "Olá! Minha solicitação de cotação é {protocolo}.",
+      apiSubmitUrl: "/api/cotacao",
+      bitrixInboundWebhookUrl: "",
+      bitrixEntityType: "DEAL",
+      bitrixTypeId: "QUOTE",
+      bitrixStageId: "NEW",
+      bitrixAssignedById: 1
+    };
+  </script>
+</head>
+<body>
+  <div class="page">
+    <header class="site-header">
+      <div class="site-header__inner">
+        <img
+          src="https://static.readdy.ai/image/5842b1dc28a7352a4cae0d6857faa04d/23154532cc4a5e0f496c49dc6abc94b1.png"
+          alt="ILG COMEX"
+          class="site-header__logo"
+          width="160"
+          height="36">
+        <span class="site-header__tagline">Logística internacional</span>
+      </div>
+    </header>
+
+    <div class="hero">
+      <h1 class="hero__title">Solicitar cotação</h1>
+      <p class="hero__subtitle">Informe origem, destino e volumes. Os dados podem ser enviados automaticamente ao seu Bitrix quando o webhook estiver configurado.</p>
+    </div>
+
+    <div class="layout">
+      <div class="form-panel">
+        <form id="cotacaoForm" novalidate>
+          <section class="section" aria-labelledby="titulo-contato">
+            <div class="section__head">
+              <div class="section__icon" aria-hidden="true"><i class="ri-user-3-line"></i></div>
+              <h2 class="section__title" id="titulo-contato">Seus dados</h2>
+            </div>
+            <p class="field-hint">Necessários para retorno da cotação e registro no CRM (Bitrix).</p>
+            <div class="field-grid field-grid--2">
+              <div class="field">
+                <label for="nome">Nome completo</label>
+                <div class="input-wrap">
+                  <i class="ri-user-line" aria-hidden="true"></i>
+                  <input type="text" id="nome" name="nome" autocomplete="name" required placeholder="Seu nome">
+                </div>
+              </div>
+              <div class="field">
+                <label for="email">E-mail</label>
+                <div class="input-wrap">
+                  <i class="ri-mail-line" aria-hidden="true"></i>
+                  <input type="email" id="email" name="email" autocomplete="email" required placeholder="voce@empresa.com">
+                </div>
+              </div>
+              <div class="field">
+                <label for="telefone">WhatsApp / telefone</label>
+                <div class="input-wrap">
+                  <i class="ri-phone-line" aria-hidden="true"></i>
+                  <input type="tel" id="telefone" name="telefone" autocomplete="tel" required placeholder="(00) 00000-0000" maxlength="16">
+                </div>
+              </div>
+              <div class="field" style="grid-column: 1 / -1;">
+                <label for="observacoes">Observações <span style="font-weight:400;color:var(--color-muted)">(opcional)</span></label>
+                <div class="input-wrap">
+                  <i class="ri-chat-3-line" aria-hidden="true"></i>
+                  <textarea id="observacoes" name="observacoes" rows="2" placeholder="Tipo de carga, prazo desejado, INCOTERM…"></textarea>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="section" aria-labelledby="titulo-origem">
+            <div class="section__head">
+              <div class="section__icon" aria-hidden="true"><i class="ri-map-pin-line"></i></div>
+              <h2 class="section__title" id="titulo-origem">Origem (Brasil)</h2>
+            </div>
+            <div class="field-grid field-grid--2">
+              <div class="field">
+                <label for="cep">CEP</label>
+                <div class="input-wrap input-wrap--cep">
+                  <i class="ri-mail-send-line" aria-hidden="true"></i>
+                  <input type="text" id="cep" name="cep" inputmode="numeric" autocomplete="postal-code" required placeholder="00000-000" maxlength="9">
+                  <span id="cepStatus" class="cep-status" aria-live="polite"></span>
+                </div>
+              </div>
+              <div class="field">
+                <label for="cidade">Cidade</label>
+                <div class="input-wrap">
+                  <i class="ri-building-line" aria-hidden="true"></i>
+                  <input type="text" id="cidade" name="cidade" readonly placeholder="Preenchido pelo CEP">
+                </div>
+              </div>
+              <div class="field">
+                <label for="estado">Estado (UF)</label>
+                <div class="input-wrap">
+                  <i class="ri-map-2-line" aria-hidden="true"></i>
+                  <input type="text" id="estado" name="estado" readonly placeholder="UF">
+                </div>
+              </div>
+              <div class="field">
+                <label for="pais">País</label>
+                <div class="input-wrap">
+                  <i class="ri-flag-line" aria-hidden="true"></i>
+                  <input type="text" id="pais" name="pais" value="Brasil" readonly>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="section" aria-labelledby="titulo-destino">
+            <div class="section__head">
+              <div class="section__icon" aria-hidden="true"><i class="ri-flight-takeoff-line"></i></div>
+              <h2 class="section__title" id="titulo-destino">Destino</h2>
+            </div>
+            <div class="field-grid field-grid--2">
+              <div class="field">
+                <label for="cidadeDestino">Cidade</label>
+                <div class="input-wrap">
+                  <i class="ri-building-line" aria-hidden="true"></i>
+                  <input type="text" id="cidadeDestino" name="cidadeDestino" required placeholder="Cidade de destino">
+                </div>
+              </div>
+              <div class="field">
+                <label for="estadoDestino">Estado / província</label>
+                <div class="input-wrap">
+                  <i class="ri-map-2-line" aria-hidden="true"></i>
+                  <input type="text" id="estadoDestino" name="estadoDestino" required placeholder="Estado ou província">
+                </div>
+              </div>
+              <div class="field">
+                <label for="cepDestino">Código postal</label>
+                <div class="input-wrap">
+                  <i class="ri-signpost-line" aria-hidden="true"></i>
+                  <input type="text" id="cepDestino" name="cepDestino" required placeholder="ZIP / postal code">
+                </div>
+              </div>
+              <div class="field">
+                <label for="paisDestino">País</label>
+                <div class="input-wrap">
+                  <i class="ri-flag-line" aria-hidden="true"></i>
+                  <select id="paisDestino" name="paisDestino" required>
+                    <option value="" disabled selected>Selecione o país</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="section" aria-labelledby="titulo-caixas">
+            <div class="section__head">
+              <div class="section__icon" aria-hidden="true"><i class="ri-box-3-line"></i></div>
+              <h2 class="section__title" id="titulo-caixas">Volumes (caixas)</h2>
+            </div>
+            <div id="caixasContainer">
+              <div class="box-card">
+                <div class="box-card__top">
+                  <h4 class="box-card__title">Caixa 1</h4>
+                  <button type="button" class="btn-remove hidden" aria-label="Remover caixa">
+                    <i class="ri-delete-bin-line"></i>
+                  </button>
+                </div>
+                <div class="dim-grid">
+                  <div class="field">
+                    <label for="altura-1">Altura (cm)</label>
+                    <div class="input-wrap">
+                      <i class="ri-arrow-up-down-line" aria-hidden="true"></i>
+                      <input id="altura-1" type="number" name="altura[]" class="dimensao" min="0" step="0.01" required placeholder="0">
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label for="largura-1">Largura (cm)</label>
+                    <div class="input-wrap">
+                      <i class="ri-arrow-left-right-line" aria-hidden="true"></i>
+                      <input id="largura-1" type="number" name="largura[]" class="dimensao" min="0" step="0.01" required placeholder="0">
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label for="comprimento-1">Comprimento (cm)</label>
+                    <div class="input-wrap">
+                      <i class="ri-ruler-line" aria-hidden="true"></i>
+                      <input id="comprimento-1" type="number" name="comprimento[]" class="dimensao" min="0" step="0.01" required placeholder="0">
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label for="peso-1">Peso (kg)</label>
+                    <div class="input-wrap">
+                      <i class="ri-scales-3-line" aria-hidden="true"></i>
+                      <input id="peso-1" type="number" name="peso[]" class="peso" min="0" step="0.01" required placeholder="0">
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <button type="button" id="adicionarCaixa" class="btn-add">
+              <i class="ri-add-line"></i>
+              Adicionar caixa
+            </button>
+
+            <div class="summary" aria-live="polite">
+              <div class="summary-row">
+                <span>Peso bruto total</span>
+                <span id="pesoBruto">0,00 kg</span>
+              </div>
+              <div class="summary-row">
+                <span>Peso cubado</span>
+                <span id="pesoCubado">0,00 kg</span>
+              </div>
+              <div class="summary-row summary-row--highlight">
+                <span>Peso considerado</span>
+                <span id="pesoConsiderado">0,00 kg</span>
+              </div>
+            </div>
+            <div id="alertaCubagem" class="alerta-cubagem" role="status">
+              <i class="ri-information-line" style="flex-shrink:0;font-size:1.25rem" aria-hidden="true"></i>
+              <span>Sua remessa parece volumosa. Consulte a ILG COMEX para otimizar espaços e custos.</span>
+            </div>
+          </section>
+
+          <section class="section" aria-labelledby="titulo-valor">
+            <div class="section__head">
+              <div class="section__icon" aria-hidden="true"><i class="ri-money-dollar-circle-line"></i></div>
+              <h2 class="section__title" id="titulo-valor">Valor declarado e seguro</h2>
+            </div>
+            <div class="field-grid">
+              <div class="field">
+                <label for="valorDeclarado">Valor declarado da mercadoria</label>
+                <div class="input-wrap">
+                  <i class="ri-price-tag-3-line" aria-hidden="true"></i>
+                  <input type="text" id="valorDeclarado" name="valorDeclarado" inputmode="numeric" required placeholder="R$ 0,00" autocomplete="off">
+                </div>
+              </div>
+              <div class="field">
+                <label for="seguro">Seguro do envio</label>
+                <div class="input-wrap">
+                  <i class="ri-shield-check-line" aria-hidden="true"></i>
+                  <select id="seguro" name="seguro" required>
+                    <option value="" disabled selected>Deseja adicionar seguro?</option>
+                    <option value="sim">Sim</option>
+                    <option value="nao">Não</option>
+                  </select>
+                </div>
+                <p id="mensagemSeguro" class="field-hint" hidden></p>
+              </div>
+            </div>
+          </section>
+
+          <button type="submit" class="btn-submit">Enviar solicitação de cotação</button>
+        </form>
+      </div>
+
+      <aside class="side-card" aria-label="Integração">
+        <h3>Bitrix / API</h3>
+        <p>Com <code>apiSubmitUrl</code> (<code>/api/cotacao</code> na Vercel), o servidor repassa o JSON ao webhook. Sem API, use <code>bitrixInboundWebhookUrl</code> (POST direto; exige CORS no destino).</p>
+        <pre id="bitrixPreview" aria-label="Pré-visualização JSON vazia até o primeiro envio">{}</pre>
+      </aside>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="site-footer__inner">
+      <p>ILG COMEX — Soluções em logística internacional</p>
+      <div class="social">
+        <a href="https://api.whatsapp.com/send?phone=5562998666000" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><i class="ri-whatsapp-line ri-lg"></i></a>
+        <a href="https://www.instagram.com/ilgcomex/" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><i class="ri-instagram-line ri-lg"></i></a>
+        <a href="https://www.facebook.com/ilgcomex" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><i class="ri-facebook-line ri-lg"></i></a>
+        <a href="https://www.linkedin.com/company/ilgcomex/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><i class="ri-linkedin-line ri-lg"></i></a>
+        <a href="https://ilgcomex.com/" target="_blank" rel="noopener noreferrer" aria-label="Site"><i class="ri-global-line ri-lg"></i></a>
+      </div>
+    </div>
+  </footer>
+
+  <div id="modalAgradecimento" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-hidden="true">
+    <div class="modal">
+      <div class="modal__success" aria-hidden="true"><i class="ri-check-line"></i></div>
+      <h2 id="modalTitle">Obrigado!</h2>
+      <p class="modal__lead">Em breve retornamos com sua cotação. Guarde o protocolo abaixo.</p>
+      <div class="resumo">
+        <h3>Resumo</h3>
+        <div class="resumo-row"><span>Protocolo</span><strong id="resumoProtocolo"></strong></div>
+        <div id="resumoBitrixCotacaoRow" class="resumo-row" style="display:none"><span>Bitrix</span><span id="resumoBitrixCotacao"></span></div>
+        <div class="resumo-row"><span>Origem</span><span id="resumoOrigem"></span></div>
+        <div class="resumo-row"><span>Destino</span><span id="resumoDestino"></span></div>
+        <div class="resumo-row"><span>Caixas</span><span id="resumoCaixas"></span></div>
+        <div class="resumo-row"><span>Peso considerado</span><span id="resumoPeso"></span></div>
+        <div class="resumo-row"><span>Valor declarado</span><span id="resumoValor"></span></div>
+      </div>
+      <a href="#" id="linkWhatsApp" class="btn-whatsapp" rel="noopener noreferrer">
+        <i class="ri-whatsapp-line ri-lg"></i>
+        Falar no WhatsApp
+      </a>
+    </div>
+  </div>
+
+  <script src="js/cotacao.js"></script>
+</body>
+</html>
