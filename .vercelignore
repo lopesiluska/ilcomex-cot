@@ -1,0 +1,2 @@
+# Backend PHP não usado no deploy Vercel (HTML + api/*.js).
+php/

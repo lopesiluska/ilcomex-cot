@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Declaração de conteúdo — ILG COMEX</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.6.0/remixicon.min.css">
+  <link rel="stylesheet" href="css/cotacao.css">
+  <link rel="stylesheet" href="css/declaracao.css">
+  <script>
+    window.ILG_DECLARACAO_CONFIG = {
+      protocolPrefix: "ILG-DC",
+      whatsappE164: "5562998666000",
+      whatsappMessageTemplate: "Olá! Minha declaração de conteúdo é {protocolo}.",
+      // Na Vercel: "/api/declaracao" (JSON + fotos base64). Vazio = só pré-visualização / webhook direto no navegador.
+      apiSubmitUrl: "/api/declaracao",
+      bitrixInboundWebhookUrl: "",
+      bitrixEntityType: "DEAL",
+      bitrixTypeId: "SERVICE",
+      bitrixStageId: "NEW",
+      bitrixAssignedById: 1,
+      emailOperacional: ""
+    };
+  </script>
+</head>
+<body>
+  <div class="page">
+    <header class="site-header">
+      <div class="site-header__inner">
+        <img
+          src="https://static.readdy.ai/image/5842b1dc28a7352a4cae0d6857faa04d/23154532cc4a5e0f496c49dc6abc94b1.png"
+          alt="ILG COMEX"
+          class="site-header__logo"
+          width="160"
+          height="36">
+        <span class="site-header__tagline">Logística internacional</span>
+      </div>
+    </header>
+
+    <div class="hero">
+      <h1 class="hero__title">Declaração de conteúdo</h1>
+      <p class="hero__subtitle">Documente remetente, destinatário, mercadorias e volumes. Gere resumo para impressão, PDF e XML. Integração Bitrix via webhook opcional.</p>
+    </div>
+
+    <div id="declaracaoEditor" class="layout">
+      <div class="form-panel">
+        <form id="declaracaoForm" novalidate>
+          <section class="section">
+            <div class="section__head">
+              <div class="section__icon" aria-hidden="true"><i class="ri-user-line"></i></div>
+              <h2 class="section__title">Dados do remetente</h2>
+            </div>
+            <div class="field-grid field-grid--2">
+              <div class="field">
+                <label for="remetenteNome">Nome completo</label>
+                <div class="input-wrap">
+                  <i class="ri-user-line" aria-hidden="true"></i>
+                  <input type="text" id="remetenteNome" required autocomplete="name" placeholder="Nome ou razão social">
+                </div>
+              </div>
+              <div class="field">
+                <label for="remetenteCPF">CPF ou CNPJ</label>
+                <div class="input-wrap">
+                  <i class="ri-id-card-line" aria-hidden="true"></i>
+                  <input type="text" id="remetenteCPF" required inputmode="numeric" placeholder="000.000.000-00 ou 00.000.000/0001-00" maxlength="18">
+                </div>
+              </div>
+              <div class="field" style="grid-column: 1 / -1;">
+                <label for="remetenteEndereco">Endereço</label>
+                <div class="input-wrap">
+                  <i class="ri-road-map-line" aria-hidden="true"></i>
+                  <input type="text" id="remetenteEndereco" required placeholder="Logradouro, número, complemento">
+                </div>
+              </div>
+              <div class="field">
+                <label for="remetenteCEP">CEP</label>
+                <div class="input-wrap input-wrap--cep">
+                  <i class="ri-map-pin-line" aria-hidden="true"></i>
+                  <input type="text" id="remetenteCEP" required inputmode="numeric" autocomplete="postal-code" placeholder="00000-000" maxlength="9">
+                  <span id="cepStatusRemetente" class="cep-status" aria-live="polite"></span>
+                </div>
+              </div>
+              <div class="field">
+                <label for="remetenteCidade">Cidade</label>
+                <div class="input-wrap">
+                  <i class="ri-building-line" aria-hidden="true"></i>
+                  <input type="text" id="remetenteCidade" required placeholder="Preenchida pelo CEP ou manual">
+                </div>
+              </div>
+              <div class="field">
+                <label for="remetenteEstado">Estado (UF)</label>
+                <div class="input-wrap">
+                  <i class="ri-map-2-line" aria-hidden="true"></i>
+                  <input type="text" id="remetenteEstado" required placeholder="UF" maxlength="2">
+                </div>
+              </div>
+              <div class="field">
+                <label for="remetentePais">País</label>
+                <div class="input-wrap">
+                  <i class="ri-flag-line" aria-hidden="true"></i>
+                  <input type="text" id="remetentePais" value="Brasil" required>
+                </div>
+              </div>
+              <div class="field">
+                <label for="remetenteTelefone">Telefone</label>
+                <div class="input-wrap">
+                  <i class="ri-phone-line" aria-hidden="true"></i>
+                  <input type="tel" id="remetenteTelefone" required autocomplete="tel" placeholder="(00) 00000-0000" maxlength="16">
+                </div>
+              </div>
+              <div class="field">
+                <label for="remetenteEmail">E-mail</label>
+                <div class="input-wrap">
+                  <i class="ri-mail-line" aria-hidden="true"></i>
+                  <input type="email" id="remetenteEmail" required autocomplete="email" placeholder="email@empresa.com">
+                </div>
+              </div>
+            </div>
+
+            <div class="check-row">
+              <input type="checkbox" id="agendamentoColeta">
+              <label for="agendamentoColeta">Preciso agendar coleta</label>
+            </div>
+            <div id="mesmoEnderecoColeta" class="coleta-panel is-hidden">
+              <span class="field-hint" style="display:block;margin-bottom:0.5rem">O endereço da coleta é o mesmo do remetente?</span>
+              <div class="radio-group">
+                <label><input type="radio" name="mesmoEndereco" id="coletaSim" value="sim" checked> Sim</label>
+                <label><input type="radio" name="mesmoEndereco" id="coletaNao" value="nao"> Não</label>
+              </div>
+            </div>
+            <div id="dadosColeta" class="coleta-panel is-hidden">
+              <p class="field-hint" style="margin-top:0">Dados do local de coleta</p>
+              <div class="field-grid field-grid--2">
+                <div class="field" style="grid-column: 1 / -1;">
+                  <label for="coletaEndereco">Endereço de coleta</label>
+                  <div class="input-wrap">
+                    <i class="ri-truck-line" aria-hidden="true"></i>
+                    <input type="text" id="coletaEndereco" placeholder="Logradouro completo">
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="coletaCEP">CEP</label>
+                  <div class="input-wrap input-wrap--cep">
+                    <i class="ri-map-pin-line" aria-hidden="true"></i>
+                    <input type="text" id="coletaCEP" inputmode="numeric" placeholder="00000-000" maxlength="9">
+                    <span id="cepStatusColeta" class="cep-status" aria-live="polite"></span>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="coletaCidade">Cidade</label>
+                  <div class="input-wrap">
+                    <i class="ri-building-line" aria-hidden="true"></i>
+                    <input type="text" id="coletaCidade" placeholder="Cidade">
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="coletaEstado">Estado (UF)</label>
+                  <div class="input-wrap">
+                    <i class="ri-map-2-line" aria-hidden="true"></i>
+                    <input type="text" id="coletaEstado" placeholder="UF" maxlength="2">
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="responsavelColeta">Responsável na coleta</label>
+                  <div class="input-wrap">
+                    <i class="ri-user-line" aria-hidden="true"></i>
+                    <input type="text" id="responsavelColeta" placeholder="Nome completo">
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="telefoneColeta">Telefone do responsável</label>
+                  <div class="input-wrap">
+                    <i class="ri-phone-line" aria-hidden="true"></i>
+                    <input type="tel" id="telefoneColeta" placeholder="(00) 00000-0000" maxlength="16">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="section">
+            <div class="section__head">
+              <div class="section__icon" aria-hidden="true"><i class="ri-user-shared-line"></i></div>
+              <h2 class="section__title">Dados do destinatário</h2>
+            </div>
+            <div class="field-grid field-grid--2">
+              <div class="field">
+                <label for="destinatarioNome">Nome completo</label>
+                <div class="input-wrap">
+                  <i class="ri-user-line" aria-hidden="true"></i>
+                  <input type="text" id="destinatarioNome" required placeholder="Destinatário">
+                </div>
+              </div>
+              <div class="field">
+                <label for="destinatarioTaxID">Tax ID ou Nº fiscal</label>
+                <div class="input-wrap">
+                  <i class="ri-file-list-line" aria-hidden="true"></i>
+                  <input type="text" id="destinatarioTaxID" placeholder="Opcional">
+                </div>
+              </div>
+              <div class="field" style="grid-column: 1 / -1;">
+                <label for="destinatarioEndereco">Endereço completo</label>
+                <div class="input-wrap">
+                  <i class="ri-map-pin-line" aria-hidden="true"></i>
+                  <input type="text" id="destinatarioEndereco" required placeholder="Endereço no exterior ou Brasil">
+                </div>
+              </div>
+              <div class="field">
+                <label for="destinatarioCidade">Cidade</label>
+                <div class="input-wrap">
+                  <i class="ri-building-line" aria-hidden="true"></i>
+                  <input type="text" id="destinatarioCidade" required>
+                </div>
+              </div>
+              <div class="field">
+                <label for="destinatarioEstado">Estado / província</label>
+                <div class="input-wrap">
+                  <i class="ri-map-2-line" aria-hidden="true"></i>
+                  <input type="text" id="destinatarioEstado" placeholder="Opcional">
+                </div>
+              </div>
+              <div class="field">
+                <label for="destinatarioPostal">Código postal</label>
+                <div class="input-wrap">
+                  <i class="ri-signpost-line" aria-hidden="true"></i>
+                  <input type="text" id="destinatarioPostal" placeholder="ZIP / postal">
+                </div>
+              </div>
+              <div class="field">
+                <label for="destinatarioPais">País</label>
+                <div class="input-wrap">
+                  <i class="ri-flag-line" aria-hidden="true"></i>
+                  <input type="text" id="destinatarioPais" placeholder="País de destino">
+                </div>
+              </div>
+              <div class="field">
+                <label for="destinatarioTelefone">Telefone</label>
+                <div class="input-wrap">
+                  <i class="ri-phone-line" aria-hidden="true"></i>
+                  <input type="tel" id="destinatarioTelefone" required maxlength="16" placeholder="(00) 00000-0000">
+                </div>
+              </div>
+              <div class="field">
+                <label for="destinatarioEmail">E-mail</label>
+                <div class="input-wrap">
+                  <i class="ri-mail-line" aria-hidden="true"></i>
+                  <input type="email" id="destinatarioEmail" required placeholder="email@destino.com">
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="section">
+            <div class="section__head">
+              <div class="section__icon" aria-hidden="true"><i class="ri-shopping-bag-line"></i></div>
+              <h2 class="section__title">Descrição da remessa</h2>
+            </div>
+            <p class="field-hint">Informe descrição clara de cada item (alfândega). Valores em reais.</p>
+            <div class="table-wrap">
+              <table class="data-table" id="remessaTable">
+                <thead>
+                  <tr>
+                    <th>Descrição</th>
+                    <th>Qtd</th>
+                    <th>Valor unit. (R$)</th>
+                    <th>Total (R$)</th>
+                    <th class="cell-actions"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><div class="input-wrap"><i class="ri-file-text-line" aria-hidden="true"></i><input type="text" class="descricao-prod" placeholder="Ex.: Vestido algodão"></div></td>
+                    <td style="max-width:6rem"><div class="input-wrap"><i class="ri-hashtag" aria-hidden="true"></i><input type="text" class="quantidade" inputmode="numeric" placeholder="0"></div></td>
+                    <td style="min-width:8rem"><div class="input-wrap"><i class="ri-price-tag-3-line" aria-hidden="true"></i><input type="text" class="valor-unitario" inputmode="numeric" placeholder="R$ 0,00"></div></td>
+                    <td style="min-width:8rem"><div class="input-wrap"><i class="ri-money-dollar-circle-line" aria-hidden="true"></i><input type="text" class="valor-total" readonly tabindex="-1" placeholder="R$ 0,00"></div></td>
+                    <td class="cell-actions"><button type="button" class="btn-icon remove-prod" aria-label="Remover linha" disabled><i class="ri-delete-bin-line"></i></button></td>
+                  </tr>
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <th>Total geral</th>
+                    <th id="totalQuantidade">0</th>
+                    <th></th>
+                    <th id="totalValorTotal">0,00</th>
+                    <th></th>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            <button type="button" id="addLinhaProd" class="btn-add" style="margin-top:0.75rem"><i class="ri-add-line"></i> Adicionar linha</button>
+          </section>
+
+          <section class="section">
+            <div class="section__head">
+              <div class="section__icon" aria-hidden="true"><i class="ri-inbox-line"></i></div>
+              <h2 class="section__title">Volumes</h2>
+            </div>
+            <p class="field-hint">Cubagem em kg: (altura cm × largura cm × comprimento cm) / 6000 — mesma regra da referência.</p>
+            <div class="volume-grid">
+              <div>
+                <div class="table-wrap">
+                  <table class="data-table" id="volumeTable">
+                    <thead>
+                      <tr>
+                        <th>ID volume</th>
+                        <th>Alt. cm</th>
+                        <th>Larg. cm</th>
+                        <th>Comp. cm</th>
+                        <th>Peso kg</th>
+                        <th>Cubado</th>
+                        <th class="cell-actions"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><input type="text" class="volume-id" value="Volume 1" aria-label="Identificador do volume"></td>
+                        <td><input type="number" class="altura" min="0" step="0.01" placeholder="0"></td>
+                        <td><input type="number" class="largura" min="0" step="0.01" placeholder="0"></td>
+                        <td><input type="number" class="comprimento" min="0" step="0.01" placeholder="0"></td>
+                        <td><input type="number" class="peso-bruto" min="0" step="0.01" placeholder="0"></td>
+                        <td class="peso-cubado peso-cubado-cell">0,00</td>
+                        <td class="cell-actions"><button type="button" class="btn-icon remove-volume" aria-label="Remover volume" disabled><i class="ri-delete-bin-line"></i></button></td>
+                      </tr>
+                    </tbody>
+                    <tfoot>
+                      <tr>
+                        <th colspan="4">Totais</th>
+                        <th id="totalPesoBruto">0,00 kg</th>
+                        <th id="totalPesoCubado">0,00 kg</th>
+                        <th></th>
+                      </tr>
+                      <tr>
+                        <th colspan="4">Peso considerado</th>
+                        <th colspan="2" id="pesoConsiderado">0,00 kg</th>
+                        <th></th>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+                <button type="button" id="addLinhaVolume" class="btn-add" style="margin-top:0.75rem"><i class="ri-add-line"></i> Adicionar volume</button>
+                <div id="mensagemVolume" class="alerta-volume" role="status">
+                  <i class="ri-information-line" style="flex-shrink:0" aria-hidden="true"></i>
+                  <span>Remessa volumosa: consulte a ILG COMEX para otimizar embalagem e custo.</span>
+                </div>
+              </div>
+              <figure class="volume-aside box-diagram">
+                <svg viewBox="0 0 120 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path fill="#e2e8f0" stroke="#0052a3" stroke-width="1.2" d="M20 35 L60 15 L100 35 L100 70 L60 90 L20 70 Z"/>
+                  <path fill="#f1f5f9" stroke="#0052a3" stroke-width="1" d="M20 35 L60 55 L100 35 L60 15 Z"/>
+                  <path fill="#cbd5e1" stroke="#0052a3" stroke-width="1" d="M60 55 L100 35 L100 70 L60 90 Z"/>
+                  <text x="8" y="58" font-size="7" fill="#64748b">Altura</text>
+                  <text x="48" y="98" font-size="7" fill="#64748b">Largura</text>
+                  <text x="102" y="58" font-size="7" fill="#64748b">Comp.</text>
+                </svg>
+                <figcaption>Ex.: 40 cm (comprimento) × 20 cm (largura) × 30 cm (altura)</figcaption>
+              </figure>
+            </div>
+          </section>
+
+          <section class="section">
+            <div class="section__head">
+              <div class="section__icon" aria-hidden="true"><i class="ri-camera-line"></i></div>
+              <h2 class="section__title">Fotos da caixa</h2>
+            </div>
+            <div class="field">
+              <label for="fotosCaixa">Fotos da caixa (enviadas como JSON pela API, com limite de tamanho)</label>
+              <input type="file" id="fotosCaixa" multiple accept="image/*">
+              <p class="file-drop-hint">Várias imagens. Nomes e tamanhos são listados abaixo e incluídos no payload Bitrix em texto.</p>
+              <ul id="fotosList" class="file-list"></ul>
+            </div>
+          </section>
+
+          <button type="submit" class="btn-submit">Enviar declaração</button>
+        </form>
+      </div>
+
+      <aside class="side-card" aria-label="Integração Bitrix">
+        <h3>Bitrix / JSON</h3>
+        <p>Com <code>apiSubmitUrl</code> (<code>/api/declaracao</code> na Vercel), o servidor repassa JSON (e fotos em base64) ao webhook. Sem API, use <code>bitrixInboundWebhookUrl</code> (POST direto; exige CORS).</p>
+        <pre id="bitrixPreviewDeclaracao" aria-label="Pré-visualização">{}</pre>
+      </aside>
+    </div>
+
+    <div id="resumoPage" class="resumo-page is-hidden">
+      <div class="resumo-page__head">
+        <h2>ILG COMEX — Declaração de conteúdo</h2>
+        <p class="field-hint" style="margin:0">Protocolo <strong id="numeroDeclaracaoResumo"></strong></p>
+        <p class="field-hint" style="margin:0">Data: <span id="dataDeclaracaoResumo"></span></p>
+        <p id="resumoBitrixLine" class="field-hint is-hidden" style="margin:0.5rem 0 0"></p>
+      </div>
+      <div class="resumo-bloco">
+        <h4>Remetente</h4>
+        <p id="resumoRemetente"></p>
+      </div>
+      <div class="resumo-bloco">
+        <h4>Destinatário</h4>
+        <p id="resumoDestinatario"></p>
+      </div>
+      <div class="resumo-bloco">
+        <h4>Produtos</h4>
+        <div class="table-wrap">
+          <table class="data-table" id="resumoProdutos">
+            <thead>
+              <tr>
+                <th>Descrição</th>
+                <th>Qtd</th>
+                <th>Unit.</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+            <tfoot>
+              <tr>
+                <th colspan="3" style="text-align:right">Total</th>
+                <th id="resumoTotalProdutos">R$ 0,00</th>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+      <div class="resumo-bloco">
+        <h4>Volumes</h4>
+        <div class="table-wrap">
+          <table class="data-table" id="resumoVolumes">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Dimensões (cm)</th>
+                <th>Peso bruto</th>
+                <th>Cubado</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+            <tfoot>
+              <tr>
+                <th colspan="2" style="text-align:right">Totais</th>
+                <th id="resumoTotalPesoBruto">0,00 kg</th>
+                <th id="resumoTotalPesoCubado">0,00 kg</th>
+              </tr>
+              <tr>
+                <th colspan="2" style="text-align:right">Peso considerado</th>
+                <th colspan="2" id="resumoPesoConsiderado">0,00 kg</th>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+      <div class="assinatura">
+        <p>_________________________________________</p>
+        <p>Assinatura do remetente</p>
+      </div>
+      <div class="resumo-actions no-print">
+        <button type="button" class="btn-secondary" id="btnImprimir"><i class="ri-printer-line"></i> Imprimir</button>
+        <button type="button" class="btn-secondary btn-pdf" id="btnDownloadPDF"><i class="ri-file-pdf-line"></i> PDF</button>
+        <button type="button" class="btn-secondary btn-xml" id="btnDownloadXML"><i class="ri-file-code-line"></i> XML</button>
+        <button type="button" class="btn-secondary" id="btnEnviarEmail"><i class="ri-mail-send-line"></i> E-mail</button>
+        <a id="whatsAppResumo" class="btn-secondary" style="background:#22c55e;color:#fff;border-color:#22c55e;text-decoration:none" href="#" target="_blank" rel="noopener noreferrer"><i class="ri-whatsapp-line"></i> WhatsApp</a>
+        <button type="button" class="btn-secondary" id="btnVoltar"><i class="ri-arrow-left-line"></i> Voltar</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="site-footer__inner">
+      <p>ILG COMEX — Soluções em logística internacional</p>
+      <div class="social">
+        <a href="https://api.whatsapp.com/send?phone=5562998666000" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><i class="ri-whatsapp-line ri-lg"></i></a>
+        <a href="https://www.instagram.com/ilgcomex/" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><i class="ri-instagram-line ri-lg"></i></a>
+        <a href="https://www.facebook.com/ilgcomex" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><i class="ri-facebook-line ri-lg"></i></a>
+        <a href="https://www.linkedin.com/company/ilgcomex/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><i class="ri-linkedin-line ri-lg"></i></a>
+        <a href="https://ilgcomex.com/" target="_blank" rel="noopener noreferrer" aria-label="Site"><i class="ri-global-line ri-lg"></i></a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="js/declaracao-conteudo.js"></script>
+</body>
+</html>
