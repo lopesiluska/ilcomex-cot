@@ -3,7 +3,7 @@
  * URL padrão pode ser sobrescrita por COTACAO_WEBHOOK_URL na Vercel.
  */
 const DEFAULT_WEBHOOK =
-  "https://integralci-ilg.jhujt5.easypanel.host/webhook/formulariositeilg";
+  "http://95.216.142.66:5678/webhook/09a2586e-e667-43f3-a071-7c302b84f010";
 
 function readBody(req) {
   return new Promise((resolve, reject) => {

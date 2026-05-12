@@ -30,7 +30,7 @@
         whatsappMessageTemplate: "Olá! Minha solicitação de cotação é {protocolo}.",
         apiSubmitUrl: useVercelApi ? "/api/cotacao" : "",
         testWebhookUrl:
-          "https://integralci-ilg.jhujt5.easypanel.host/webhook/formulariositeilg",
+          "http://95.216.142.66:5678/webhook/09a2586e-e667-43f3-a071-7c302b84f010",
         bitrixInboundWebhookUrl: "",
         bitrixEntityType: "DEAL",
         bitrixTypeId: "QUOTE",
@@ -282,7 +282,7 @@
       <aside class="side-card" aria-label="Integração">
         <h3>Bitrix / API</h3>
         <p>Com <code>apiSubmitUrl</code> (<code>/api/cotacao</code> na Vercel), o servidor repassa o JSON ao webhook. Em <strong>GitHub Pages</strong> não há <code>/api</code> — use o teste abaixo (POST direto) ou hospede na Vercel.</p>
-        <p class="field-hint" style="margin-top:0.75rem"><strong>Teste rápido:</strong> um <code>POST</code> mínimo (<code>protocolo</code> + <code>dados</code>) para o webhook em <code>testWebhookUrl</code>. Se aparecer erro de CORS, o n8n precisa liberar o domínio do site ou você usa só a API na Vercel.</p>
+        <p class="field-hint" style="margin-top:0.75rem"><strong>Teste rápido:</strong> envia JSON mínimo (<code>protocolo</code> + <code>dados</code>). Se <code>apiSubmitUrl</code> estiver definido (ex.: <code>/api/cotacao</code> na Vercel), o teste usa a API no mesmo domínio (evita CORS). No GitHub Pages o teste tenta POST direto em <code>testWebhookUrl</code> — na prática o navegador bloqueia sem CORS no n8n.</p>
         <button type="button" id="btnTestWebhookPOST" class="btn-add" style="margin-top:0.5rem">
           <i class="ri-send-plane-line"></i>
           Testar POST no webhook
@@ -335,21 +335,31 @@
       var out = document.getElementById("testWebhookOut");
       if (!btn || !out) return;
       var DEFAULT_WEBHOOK =
-        "https://integralci-ilg.jhujt5.easypanel.host/webhook/formulariositeilg";
+        "http://95.216.142.66:5678/webhook/09a2586e-e667-43f3-a071-7c302b84f010";
       btn.addEventListener("click", function () {
         var CFG = window.ILG_COTACAO_CONFIG || {};
-        var url = (CFG.testWebhookUrl || "").trim() || DEFAULT_WEBHOOK;
+        var apiUrl = (CFG.apiSubmitUrl || "").trim();
+        var useApi = !!apiUrl;
+        var directUrl = (CFG.testWebhookUrl || "").trim() || DEFAULT_WEBHOOK;
+        var url = useApi ? apiUrl : directUrl;
         var protocolo =
           (CFG.protocolPrefix || "TEST") + String(Date.now()).slice(-8);
         var body = JSON.stringify({
           protocolo: protocolo,
           dados: {
             teste: true,
-            origem: "cotacao.html (botão Testar POST)",
+            origem: useApi
+              ? "cotacao.html (teste via " + apiUrl + ")"
+              : "cotacao.html (POST direto ao webhook)",
             dataHora: new Date().toISOString()
           }
         });
-        out.textContent = "Enviando POST para:\n" + url + "\n\n…";
+        out.textContent =
+          (useApi
+            ? "Enviando POST para a API (mesmo site):\n"
+            : "Enviando POST direto do navegador para:\n") +
+          url +
+          "\n\n…";
         fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -367,11 +377,22 @@
             });
           })
           .catch(function (e) {
-            out.textContent =
+            var msg =
               "Falha (rede ou CORS).\n\n" +
               (e && e.message ? e.message : String(e)) +
-              "\n\n• GitHub Pages: POST direto do navegador só funciona se o webhook responder com CORS.\n" +
-              "• Vercel: defina apiSubmitUrl como /api/cotacao (ou use domínio *.vercel.app para detecção automática).";
+              "\n\n";
+            if (useApi) {
+              msg +=
+                "O POST ia para a API deste site (" +
+                apiUrl +
+                "). Confira se o deploy é na Vercel, se a pasta api/ está no projeto e os logs da função.";
+            } else {
+              msg +=
+                "POST direto do navegador para o n8n costuma ser bloqueado (CORS). Soluções:\n" +
+                "• Abra o site pelo URL da Vercel (*.vercel.app) ou defina apiSubmitUrl: \"/api/cotacao\" no script (domínio próprio na Vercel).\n" +
+                "• Ou habilite CORS no webhook para o domínio do seu site.";
+            }
+            out.textContent = msg;
           });
       });
     })();
