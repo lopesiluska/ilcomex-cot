@@ -17,6 +17,10 @@ function readBody(req) {
 }
 
 module.exports = async function handler(req, res) {
+  const reqId = Math.random().toString(36).slice(2, 8);
+  const tag = `[ILG /api/cotacao ${reqId}]`;
+  console.log(`${tag} >> ${req.method} ${req.url || ""} from ${req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "?"}`);
+
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -27,12 +31,16 @@ module.exports = async function handler(req, res) {
   }
 
   if (req.method !== "POST") {
+    console.warn(`${tag} método não permitido: ${req.method}`);
     res.setHeader("Content-Type", "application/json; charset=utf-8");
     res.statusCode = 405;
     return res.end(JSON.stringify({ success: false, error: "Use POST (JSON)." }));
   }
 
   const webhook = (process.env.COTACAO_WEBHOOK_URL || DEFAULT_WEBHOOK).trim();
+  console.log(
+    `${tag} webhook destino: ${webhook} (origem: ${process.env.COTACAO_WEBHOOK_URL ? "env COTACAO_WEBHOOK_URL" : "DEFAULT_WEBHOOK"})`
+  );
   if (!webhook) {
     res.setHeader("Content-Type", "application/json; charset=utf-8");
     res.statusCode = 500;
@@ -131,8 +139,13 @@ module.exports = async function handler(req, res) {
     seguro: str(d.seguro),
   };
 
-  const forwardBody = JSON.stringify({ protocolo, dados: dadosClean });
+  const forwardPayload = { protocolo, dados: dadosClean };
+  const forwardBody = JSON.stringify(forwardPayload);
 
+  console.log(`${tag} protocolo=${protocolo} caixas=${dadosClean.caixas.length} valor=${dadosClean.valorDeclaradoNumero}`);
+  console.log(`${tag} payload enviado ao webhook:`, JSON.stringify(forwardPayload, null, 2));
+
+  const startedAt = Date.now();
   let upstream;
   try {
     upstream = await fetch(webhook, {
@@ -141,6 +154,7 @@ module.exports = async function handler(req, res) {
       body: forwardBody,
     });
   } catch (e) {
+    console.error(`${tag} ERRO ao contatar webhook:`, e?.message || e);
     res.setHeader("Content-Type", "application/json; charset=utf-8");
     res.statusCode = 502;
     return res.end(
@@ -151,6 +165,7 @@ module.exports = async function handler(req, res) {
     );
   }
 
+  const elapsedMs = Date.now() - startedAt;
   const text = await upstream.text();
   let upstreamJson = null;
   try {
@@ -159,9 +174,15 @@ module.exports = async function handler(req, res) {
     /* texto puro */
   }
 
+  console.log(
+    `${tag} resposta webhook: HTTP ${upstream.status} em ${elapsedMs}ms — corpo:`,
+    upstreamJson !== null ? upstreamJson : (text || "(vazio)")
+  );
+
   res.setHeader("Content-Type", "application/json; charset=utf-8");
 
   if (!upstream.ok) {
+    console.warn(`${tag} webhook respondeu com erro HTTP ${upstream.status}`);
     res.statusCode = 502;
     return res.end(
       JSON.stringify({
@@ -172,6 +193,8 @@ module.exports = async function handler(req, res) {
       })
     );
   }
+
+  console.log(`${tag} << OK 200 protocolo=${protocolo}`);
 
   return res.end(
     JSON.stringify({
