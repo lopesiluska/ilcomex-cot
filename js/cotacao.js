@@ -122,14 +122,10 @@
     };
   }
 
-  async function enviarApiCotacao(protocolo, dados, bitrixPayload) {
+  async function enviarApiCotacao(protocolo, dados) {
     const url = (CFG.apiSubmitUrl || "").trim();
     if (!url) return { skipped: true };
-    const body = {
-      protocolo,
-      dados,
-      ...(bitrixPayload ? { bitrix: bitrixPayload } : {}),
-    };
+    const body = { protocolo, dados };
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -227,7 +223,6 @@
       valorDeclarado: (fd.get("valorDeclarado") || "").trim(),
       valorDeclaradoNumero: parseBRLToNumber(fd.get("valorDeclarado")),
       seguro: fd.get("seguro") || "",
-      dataHora: new Date().toISOString(),
     };
   }
 
@@ -330,7 +325,7 @@
         UF_CRM_PESO_CONSIDERADO: pesoConsideradoNum,
         UF_CRM_VALOR_DECLARADO: opportunity,
         UF_CRM_SEGURO: seguroSim ? "Y" : "N",
-        UF_CRM_DATA_COTACAO: dados.dataHora,
+        UF_CRM_DATA_COTACAO: new Date().toISOString(),
         UF_CRM_CAIXAS_JSON: JSON.stringify(dados.caixas),
       },
     };
@@ -581,7 +576,7 @@
 
       const apiUrl = (CFG.apiSubmitUrl || "").trim();
       if (apiUrl) {
-        enviarApiCotacao(protocolo, dados, bitrixPayload)
+        enviarApiCotacao(protocolo, dados)
           .then(function (r) {
             if (bitrixPreview) bitrixPreview.textContent = JSON.stringify(r, null, 2);
             if (r && r.bitrixDealId && resumoBitrixRow && resumoBitrix) {
