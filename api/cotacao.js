@@ -84,7 +84,54 @@ module.exports = async function handler(req, res) {
     );
   }
 
-  const forwardBody = JSON.stringify(parsed);
+  const d = parsed.dados;
+  const contato = d.contato || {};
+  const origem = d.origem || {};
+  const destino = d.destino || {};
+  const caixasIn = Array.isArray(d.caixas) ? d.caixas : [];
+
+  const str = (v) => (v == null ? "" : String(v));
+  const num = (v) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  const dadosClean = {
+    protocolo,
+    contato: {
+      nome: str(contato.nome),
+      email: str(contato.email),
+      telefone: str(contato.telefone),
+      observacoes: str(contato.observacoes),
+    },
+    origem: {
+      cep: str(origem.cep),
+      cidade: str(origem.cidade),
+      estado: str(origem.estado),
+      pais: str(origem.pais || "Brasil"),
+    },
+    destino: {
+      cidade: str(destino.cidade),
+      estado: str(destino.estado),
+      cep: str(destino.cep),
+      pais: str(destino.pais),
+    },
+    caixas: caixasIn.map((c, i) => ({
+      numero: Number.isFinite(Number(c && c.numero)) ? Number(c.numero) : i + 1,
+      altura: str(c && c.altura),
+      largura: str(c && c.largura),
+      comprimento: str(c && c.comprimento),
+      peso: str(c && c.peso),
+    })),
+    pesoBruto: str(d.pesoBruto),
+    pesoCubado: str(d.pesoCubado),
+    pesoConsiderado: str(d.pesoConsiderado),
+    valorDeclarado: str(d.valorDeclarado),
+    valorDeclaradoNumero: num(d.valorDeclaradoNumero),
+    seguro: str(d.seguro),
+  };
+
+  const forwardBody = JSON.stringify({ protocolo, dados: dadosClean });
 
   let upstream;
   try {
