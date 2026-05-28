@@ -103,6 +103,24 @@ module.exports = async function handler(req, res) {
     const n = Number(v);
     return Number.isFinite(n) ? n : 0;
   };
+  const parseNum = (v) => {
+    const s = str(v).replace(",", ".").trim();
+    const n = Number(s);
+    return Number.isFinite(n) ? n : 0;
+  };
+  const formatKgBR = (n) =>
+    n.toLocaleString("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }) + " kg";
+  const normalizeBRLPlain = (value) => {
+    // "R$ 1.500,00" -> "1500,00" ; "" -> ""
+    const digits = str(value).replace(/\D/g, "");
+    if (!digits) return "";
+    const cents = parseInt(digits, 10);
+    const reais = (cents / 100).toFixed(2);
+    return reais.replace(".", ",");
+  };
 
   const dadosClean = {
     protocolo,
@@ -124,13 +142,32 @@ module.exports = async function handler(req, res) {
       cep: str(destino.cep),
       pais: str(destino.pais),
     },
-    caixas: caixasIn.map((c, i) => ({
-      numero: Number.isFinite(Number(c && c.numero)) ? Number(c.numero) : i + 1,
-      altura: str(c && c.altura),
-      largura: str(c && c.largura),
-      comprimento: str(c && c.comprimento),
-      peso: str(c && c.peso),
-    })),
+    caixas: caixasIn.map((c, i) => {
+      const altura = str(c && c.altura);
+      const largura = str(c && c.largura);
+      const comprimento = str(c && c.comprimento);
+      const peso = str(c && c.peso);
+
+      const pesoBrutoNum = parseNum(peso);
+      const pesoCubadoNum =
+        (parseNum(altura) * parseNum(largura) * parseNum(comprimento)) / 5000;
+      const pesoConsideradoNum = Math.max(pesoBrutoNum, pesoCubadoNum);
+
+      return {
+        numero: Number.isFinite(Number(c && c.numero)) ? Number(c.numero) : i + 1,
+        altura,
+        largura,
+        comprimento,
+        peso,
+        pesoBruto: formatKgBR(pesoBrutoNum),
+        pesoCubado: formatKgBR(pesoCubadoNum),
+        pesoConsiderado: formatKgBR(pesoConsideradoNum),
+        // O formulário atual tem um único "valor declarado" total; repetimos por caixa.
+        valorDeclarado: normalizeBRLPlain((c && c.valorDeclarado) || d.valorDeclarado),
+      };
+    }),
+    // Mantemos esses campos para compatibilidade com o front,
+    // mas o payload encaminhado ao webhook será um "shape" resumido.
     pesoBruto: str(d.pesoBruto),
     pesoCubado: str(d.pesoCubado),
     pesoConsiderado: str(d.pesoConsiderado),
@@ -139,7 +176,18 @@ module.exports = async function handler(req, res) {
     seguro: str(d.seguro),
   };
 
-  const forwardPayload = { protocolo, dados: dadosClean };
+  const forwardPayload = {
+    body: {
+      protocolo,
+      dados: {
+        protocolo,
+        contato: dadosClean.contato,
+        origem: dadosClean.origem,
+        destino: dadosClean.destino,
+        caixas: dadosClean.caixas,
+      },
+    },
+  };
   const forwardBody = JSON.stringify(forwardPayload);
 
   console.log(`${tag} protocolo=${protocolo} caixas=${dadosClean.caixas.length} valor=${dadosClean.valorDeclaradoNumero}`);

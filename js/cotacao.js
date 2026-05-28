@@ -168,8 +168,16 @@
         0;
       const peso =
         parseFloat(caixa.querySelector('input[name="peso[]"]').value) || 0;
+      const cubado = (alt * larg * comp) / 5000;
+      const considerado = Math.max(peso, cubado);
+
       pesoBrutoTotal += peso;
-      pesoCubadoTotal += (alt * larg * comp) / 5000;
+      pesoCubadoTotal += cubado;
+
+      const outCubado = caixa.querySelector("[data-box-peso-cubado]");
+      const outConsiderado = caixa.querySelector("[data-box-peso-considerado]");
+      if (outCubado) outCubado.textContent = formatKg(cubado);
+      if (outConsiderado) outConsiderado.textContent = formatKg(considerado);
     });
     const pesoConsiderado = Math.max(pesoBrutoTotal, pesoCubadoTotal);
     els.pesoBruto.textContent = formatKg(pesoBrutoTotal);
@@ -183,12 +191,30 @@
   function collectFormData(form, caixasContainer) {
     const fd = new FormData(form);
     const caixas = getCaixas(caixasContainer).map(function (caixa, index) {
+      const alt =
+        parseFloat(caixa.querySelector('input[name="altura[]"]').value) || 0;
+      const larg =
+        parseFloat(caixa.querySelector('input[name="largura[]"]').value) || 0;
+      const comp =
+        parseFloat(caixa.querySelector('input[name="comprimento[]"]').value) ||
+        0;
+      const pesoNum =
+        parseFloat(caixa.querySelector('input[name="peso[]"]').value) || 0;
+      const cubado = (alt * larg * comp) / 5000;
+      const considerado = Math.max(pesoNum, cubado);
+
       return {
         numero: index + 1,
         altura: caixa.querySelector('input[name="altura[]"]').value,
         largura: caixa.querySelector('input[name="largura[]"]').value,
         comprimento: caixa.querySelector('input[name="comprimento[]"]').value,
         peso: caixa.querySelector('input[name="peso[]"]').value,
+        pesoBruto: formatKg(pesoNum),
+        pesoCubado: formatKg(cubado),
+        pesoConsiderado: formatKg(considerado),
+        valorDeclarado: (
+          caixa.querySelector('input[name="valorDeclaradoCaixa[]"]')?.value || ""
+        ).trim(),
       };
     });
     const pesoBrutoText = document.getElementById("pesoBruto").textContent;
@@ -398,7 +424,13 @@
       '<i class="ri-scales-3-line"></i>' +
       '<input type="number" name="peso[]" class="peso" min="0" step="0.01" required placeholder="0">' +
       "</div></div>" +
+      '<div class="field"><label>Valor declarado (caixa)</label><div class="input-wrap">' +
+      '<i class="ri-price-tag-3-line"></i>' +
+      '<input type="text" name="valorDeclaradoCaixa[]" class="money-brl" inputmode="numeric" placeholder="R$ 0,00" autocomplete="off">' +
+      "</div></div>" +
       "</div>";
+    wrap.innerHTML +=
+      '<p class="field-hint box-metrics">Cubado: <strong data-box-peso-cubado>0,00 kg</strong> · Considerado: <strong data-box-peso-considerado>0,00 kg</strong></p>';
     return wrap;
   }
 
@@ -410,7 +442,7 @@
     const cidadeInput = document.getElementById("cidade");
     const estadoInput = document.getElementById("estado");
     const cepStatus = document.getElementById("cepStatus");
-    const valorDeclaradoInput = document.getElementById("valorDeclarado");
+    const moneyInputs = Array.from(document.querySelectorAll(".money-brl"));
     const telefoneInput = document.getElementById("telefone");
     const seguroSelect = document.getElementById("seguro");
     const mensagemSeguro = document.getElementById("mensagemSeguro");
@@ -447,6 +479,7 @@
       const card = createBoxTemplate(n);
       caixasContainer.appendChild(card);
       bindBoxCard(card, caixasContainer, els, calcFn);
+      bindMoneyInput(card.querySelector(".money-brl"));
       renumberBoxes(caixasContainer);
       calcFn();
     });
@@ -506,10 +539,14 @@
       });
     }
 
-    valorDeclaradoInput.addEventListener("input", function () {
-      const digits = onlyDigits(valorDeclaradoInput.value);
-      valorDeclaradoInput.value = formatBRLFromDigits(digits);
-    });
+    function bindMoneyInput(inp) {
+      if (!inp) return;
+      inp.addEventListener("input", function () {
+        const digits = onlyDigits(inp.value);
+        inp.value = formatBRLFromDigits(digits);
+      });
+    }
+    moneyInputs.forEach(bindMoneyInput);
 
     seguroSelect.addEventListener("change", function () {
       mensagemSeguro.hidden = false;
