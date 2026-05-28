@@ -391,6 +391,8 @@
             ? "Enviando POST para a API (mesmo site):\n"
             : "Enviando POST direto do navegador para:\n") +
           url +
+          "\n\nPayload (JSON):\n" +
+          body +
           "\n\n…";
         fetch(url, {
           method: "POST",
