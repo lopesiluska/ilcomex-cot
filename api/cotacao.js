@@ -75,6 +75,13 @@ module.exports = async function handler(req, res) {
     return res.end(JSON.stringify({ success: false, error: "JSON inválido." }));
   }
 
+  // Se o cliente mandar { body: { protocolo, dados } }, desembrulha para não duplicar no n8n.
+  if (parsed.body && typeof parsed.body === "object") {
+    const inner = parsed.body;
+    if (!parsed.protocolo && inner.protocolo) parsed.protocolo = inner.protocolo;
+    if (!parsed.dados && inner.dados) parsed.dados = inner.dados;
+  }
+
   const protocolo = String(parsed.protocolo || "").replace(/[^A-Za-z0-9\-_]/g, "");
   if (!protocolo) {
     res.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -176,16 +183,16 @@ module.exports = async function handler(req, res) {
     seguro: str(d.seguro),
   };
 
+  // Envia { protocolo, dados } no corpo HTTP. O n8n expõe isso em $json.body.* —
+  // não envolver em { body: ... } aqui, senão vira $json.body.body.* (duplicado).
   const forwardPayload = {
-    body: {
+    protocolo,
+    dados: {
       protocolo,
-      dados: {
-        protocolo,
-        contato: dadosClean.contato,
-        origem: dadosClean.origem,
-        destino: dadosClean.destino,
-        caixas: dadosClean.caixas,
-      },
+      contato: dadosClean.contato,
+      origem: dadosClean.origem,
+      destino: dadosClean.destino,
+      caixas: dadosClean.caixas,
     },
   };
   const forwardBody = JSON.stringify(forwardPayload);

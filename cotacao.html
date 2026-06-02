@@ -354,9 +354,7 @@
         var url = useApi ? apiUrl : directUrl;
         var protocolo =
           (CFG.protocolPrefix || "TEST") + String(Date.now()).slice(-8);
-        // Mantém o formato correto de cada destino:
-        // - via API (/api/cotacao): { protocolo, dados }
-        // - direto ao webhook: { body: { protocolo, dados } }
+        // Mesmo formato do formulário: { protocolo, dados } (o n8n cria o wrapper body sozinho).
         var dadosTeste = {
           protocolo: protocolo,
           contato: {
@@ -381,9 +379,7 @@
           seguro: "nao"
         };
 
-        var payload = useApi
-          ? { protocolo: protocolo, dados: dadosTeste }
-          : { body: { protocolo: protocolo, dados: dadosTeste } };
+        var payload = { protocolo: protocolo, dados: dadosTeste };
 
         var body = JSON.stringify(payload);
         out.textContent =
