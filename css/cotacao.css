@@ -532,6 +532,126 @@ input[type="number"]::-webkit-inner-spin-button {
   background: #f1f5f9;
 }
 
+.loading-cotacao {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(6px);
+}
+
+.loading-cotacao.is-open {
+  display: flex;
+}
+
+.loading-cotacao__panel {
+  max-width: 420px;
+  width: 100%;
+  background: #fff;
+  border-radius: var(--radius-lg);
+  padding: 1.75rem 1.5rem;
+  text-align: center;
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.25);
+}
+
+.loading-cotacao__spinner {
+  width: 3rem;
+  height: 3rem;
+  margin: 0 auto 1.25rem;
+  border: 3px solid #e2e8f0;
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: cotacao-spin 0.85s linear infinite;
+}
+
+@keyframes cotacao-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-cotacao__title {
+  margin: 0 0 0.65rem;
+  font-size: 1.2rem;
+  color: var(--color-text);
+}
+
+.loading-cotacao__text {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+  color: var(--color-muted);
+  line-height: 1.55;
+}
+
+.loading-cotacao__hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+}
+
+.resumo-status {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+}
+
+.resumo-status--ok {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.resumo-status--err {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.resumo-status i {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  margin-top: 0.05rem;
+}
+
+.resumo-link-box {
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: var(--radius);
+}
+
+.resumo-link-box__label {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-muted);
+  margin-bottom: 0.35rem;
+}
+
+.resumo-link-box a {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  word-break: break-all;
+}
+
+.modal__success--err {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0;

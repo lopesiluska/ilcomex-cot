@@ -285,7 +285,7 @@
             </div>
           </section>
 
-          <button type="submit" class="btn-submit">Enviar solicitação de cotação</button>
+          <button type="submit" id="btnSubmitCotacao" class="btn-submit">Enviar solicitação de cotação</button>
         </form>
       </div>
 
@@ -316,11 +316,37 @@
     </div>
   </footer>
 
+  <div id="loadingCotacao" class="loading-cotacao" aria-hidden="true" aria-live="polite" aria-busy="true">
+    <div class="loading-cotacao__panel">
+      <div class="loading-cotacao__spinner" aria-hidden="true"></div>
+      <h2 class="loading-cotacao__title">Processando sua cotação</h2>
+      <p id="loadingCotacaoMsg" class="loading-cotacao__text">
+        Estamos registrando sua solicitação e consultando as opções de envio. Isso pode levar até 3 minutos — por favor, não feche esta página.
+      </p>
+      <p class="loading-cotacao__hint">
+        <i class="ri-time-line" aria-hidden="true"></i>
+        Aguarde enquanto finalizamos o cadastro no sistema.
+      </p>
+    </div>
+  </div>
+
   <div id="modalAgradecimento" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-hidden="true">
     <div class="modal">
-      <div class="modal__success" aria-hidden="true"><i class="ri-check-line"></i></div>
+      <div id="modalIconWrap" class="modal__success" aria-hidden="true"><i class="ri-check-line"></i></div>
       <h2 id="modalTitle">Obrigado!</h2>
-      <p class="modal__lead">Em breve retornamos com sua cotação. Guarde o protocolo abaixo.</p>
+      <p id="modalLead" class="modal__lead">Em breve retornamos com sua cotação. Guarde o protocolo abaixo.</p>
+      <div id="resumoCadastroRow" class="resumo-status resumo-status--ok" hidden>
+        <i class="ri-checkbox-circle-line" aria-hidden="true"></i>
+        <span id="resumoCadastroTexto">Cadastro realizado com sucesso.</span>
+      </div>
+      <div id="resumoCadastroErroRow" class="resumo-status resumo-status--err" hidden>
+        <i class="ri-error-warning-line" aria-hidden="true"></i>
+        <span id="resumoCadastroErroTexto">Não foi possível confirmar o cadastro.</span>
+      </div>
+      <div id="resumoUrlCotacaoRow" class="resumo-link-box" hidden>
+        <span class="resumo-link-box__label">Link da cotação</span>
+        <a id="resumoUrlCotacao" href="#" target="_blank" rel="noopener noreferrer"></a>
+      </div>
       <div class="resumo">
         <h3>Resumo</h3>
         <div class="resumo-row"><span>Protocolo</span><strong id="resumoProtocolo"></strong></div>
