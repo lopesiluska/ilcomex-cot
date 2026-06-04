@@ -122,15 +122,91 @@
     };
   }
 
+  const COTACAO_FETCH_TIMEOUT_MS = 180000;
+  const LOADING_MSGS = [
+    "Estamos registrando sua solicitação e preparando sua cotação.",
+    "Calculando pesos e volumes das suas caixas.",
+    "Consultando opções de envio internacional — isso pode levar até 3 minutos.",
+    "Por favor, não feche esta página. Estamos finalizando o cadastro no sistema.",
+    "Quase lá! Aguarde só mais um instante.",
+  ];
+
+  function extrairResultadoCotacao(apiJson) {
+    if (!apiJson || typeof apiJson !== "object") {
+      return { urlCotacao: null, cadastroRealizado: null };
+    }
+    if (apiJson.urlCotacao != null || apiJson.cadastroRealizado != null) {
+      return {
+        urlCotacao: apiJson.urlCotacao ? String(apiJson.urlCotacao).trim() : null,
+        cadastroRealizado:
+          typeof apiJson.cadastroRealizado === "boolean"
+            ? apiJson.cadastroRealizado
+            : null,
+      };
+    }
+    let wr = apiJson.webhookResponse;
+    if (wr == null) return { urlCotacao: null, cadastroRealizado: null };
+    if (typeof wr === "string") {
+      try {
+        wr = JSON.parse(wr);
+      } catch {
+        return { urlCotacao: null, cadastroRealizado: null };
+      }
+    }
+    if (typeof wr !== "object") return { urlCotacao: null, cadastroRealizado: null };
+    const nested = wr.body && typeof wr.body === "object" ? wr.body : wr;
+    const urlCotacao =
+      nested.urlCotacao ||
+      nested.url_cotacao ||
+      nested.cotacaoUrl ||
+      nested.cotacao_url ||
+      nested.url ||
+      nested.link ||
+      wr.urlCotacao ||
+      wr.url ||
+      null;
+    let cadastroRealizado = null;
+    if (typeof nested.cadastroRealizado === "boolean") {
+      cadastroRealizado = nested.cadastroRealizado;
+    } else if (typeof nested.cadastro_realizado === "boolean") {
+      cadastroRealizado = nested.cadastro_realizado;
+    } else if (typeof nested.realizado === "boolean") {
+      cadastroRealizado = nested.realizado;
+    } else if (typeof wr.success === "boolean") {
+      cadastroRealizado = wr.success;
+    }
+    return {
+      urlCotacao: urlCotacao ? String(urlCotacao).trim() : null,
+      cadastroRealizado,
+    };
+  }
+
   async function enviarApiCotacao(protocolo, dados) {
     const url = (CFG.apiSubmitUrl || "").trim();
     if (!url) return { skipped: true };
     const body = { protocolo, dados };
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(function () {
+      controller.abort();
+    }, COTACAO_FETCH_TIMEOUT_MS);
+    let res;
+    try {
+      res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+    } catch (e) {
+      if (e && e.name === "AbortError") {
+        throw new Error(
+          "A cotação demorou mais de 3 minutos. Tente novamente ou fale conosco pelo WhatsApp."
+        );
+      }
+      throw e;
+    } finally {
+      clearTimeout(timeoutId);
+    }
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {
       throw new Error(json.error || "Erro " + res.status);
@@ -449,6 +525,130 @@
     const modal = document.getElementById("modalAgradecimento");
     const linkWhats = document.getElementById("linkWhatsApp");
     const bitrixPreview = document.getElementById("bitrixPreview");
+    const loadingEl = document.getElementById("loadingCotacao");
+    const loadingMsgEl = document.getElementById("loadingCotacaoMsg");
+    const submitBtn = document.getElementById("btnSubmitCotacao");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalLead = document.getElementById("modalLead");
+    const modalIconWrap = document.getElementById("modalIconWrap");
+    const resumoCadastroRow = document.getElementById("resumoCadastroRow");
+    const resumoCadastroTexto = document.getElementById("resumoCadastroTexto");
+    const resumoCadastroErroRow = document.getElementById("resumoCadastroErroRow");
+    const resumoCadastroErroTexto = document.getElementById("resumoCadastroErroTexto");
+    const resumoUrlCotacaoRow = document.getElementById("resumoUrlCotacaoRow");
+    const resumoUrlCotacao = document.getElementById("resumoUrlCotacao");
+
+    let loadingMsgTimer = null;
+    let loadingMsgIndex = 0;
+
+    function showLoadingCotacao() {
+      if (!loadingEl) return;
+      document.body.style.overflow = "hidden";
+      loadingMsgIndex = 0;
+      if (loadingMsgEl) loadingMsgEl.textContent = LOADING_MSGS[0];
+      loadingEl.classList.add("is-open");
+      loadingEl.setAttribute("aria-hidden", "false");
+      if (loadingMsgTimer) clearInterval(loadingMsgTimer);
+      loadingMsgTimer = setInterval(function () {
+        loadingMsgIndex = (loadingMsgIndex + 1) % LOADING_MSGS.length;
+        if (loadingMsgEl) loadingMsgEl.textContent = LOADING_MSGS[loadingMsgIndex];
+      }, 8000);
+    }
+
+    function hideLoadingCotacao() {
+      document.body.style.overflow = "";
+      if (loadingMsgTimer) {
+        clearInterval(loadingMsgTimer);
+        loadingMsgTimer = null;
+      }
+      if (!loadingEl) return;
+      loadingEl.classList.remove("is-open");
+      loadingEl.setAttribute("aria-hidden", "true");
+    }
+
+    function setFormSubmitting(busy) {
+      if (submitBtn) {
+        submitBtn.disabled = !!busy;
+        submitBtn.textContent = busy
+          ? "Processando cotação…"
+          : "Enviar solicitação de cotação";
+      }
+    }
+
+    function resetModalResultado() {
+      if (resumoCadastroRow) resumoCadastroRow.hidden = true;
+      if (resumoCadastroErroRow) resumoCadastroErroRow.hidden = true;
+      if (resumoUrlCotacaoRow) resumoUrlCotacaoRow.hidden = true;
+      if (modalIconWrap) {
+        modalIconWrap.className = "modal__success";
+        modalIconWrap.innerHTML = '<i class="ri-check-line"></i>';
+      }
+    }
+
+    function aplicarResultadoModal(apiJson, erroMsg) {
+      resetModalResultado();
+      if (erroMsg) {
+        if (modalTitle) modalTitle.textContent = "Não foi possível concluir";
+        if (modalLead) modalLead.textContent = erroMsg;
+        if (modalIconWrap) {
+          modalIconWrap.className = "modal__success modal__success--err";
+          modalIconWrap.innerHTML = '<i class="ri-close-line"></i>';
+        }
+        if (resumoCadastroErroRow && resumoCadastroErroTexto) {
+          resumoCadastroErroRow.hidden = false;
+          resumoCadastroErroTexto.textContent = erroMsg;
+        }
+        return;
+      }
+
+      const meta = extrairResultadoCotacao(apiJson);
+      const cadastroOk = meta.cadastroRealizado === true;
+      const cadastroFalhou = meta.cadastroRealizado === false;
+
+      if (cadastroOk) {
+        if (modalTitle) modalTitle.textContent = "Cotação registrada!";
+        if (modalLead) {
+          modalLead.textContent =
+            "Seu cadastro foi realizado com sucesso. Confira o link da cotação abaixo.";
+        }
+        if (resumoCadastroRow && resumoCadastroTexto) {
+          resumoCadastroRow.hidden = false;
+          resumoCadastroTexto.textContent = "Cadastro realizado com sucesso.";
+        }
+      } else if (cadastroFalhou) {
+        if (modalTitle) modalTitle.textContent = "Solicitação recebida";
+        if (modalLead) {
+          modalLead.textContent =
+            "Recebemos seus dados, mas não foi possível confirmar o cadastro automático. Nossa equipe dará sequência.";
+        }
+        if (resumoCadastroErroRow && resumoCadastroErroTexto) {
+          resumoCadastroErroRow.hidden = false;
+          resumoCadastroErroTexto.textContent =
+            "Cadastro não confirmado pelo sistema. Entre em contato se precisar de urgência.";
+        }
+        if (modalIconWrap) {
+          modalIconWrap.className = "modal__success modal__success--err";
+          modalIconWrap.innerHTML = '<i class="ri-error-warning-line"></i>';
+        }
+      } else {
+        if (modalTitle) modalTitle.textContent = "Obrigado!";
+        if (modalLead) {
+          modalLead.textContent =
+            "Sua solicitação foi enviada. Em breve retornamos com sua cotação.";
+        }
+      }
+
+      if (meta.urlCotacao && resumoUrlCotacaoRow && resumoUrlCotacao) {
+        resumoUrlCotacaoRow.hidden = false;
+        resumoUrlCotacao.href = meta.urlCotacao;
+        resumoUrlCotacao.textContent = meta.urlCotacao;
+      }
+    }
+
+    function abrirModalAgradecimento() {
+      modal.classList.add("is-open");
+      modal.setAttribute("aria-hidden", "false");
+    }
 
     const els = {
       pesoBruto: document.getElementById("pesoBruto"),
@@ -561,6 +761,10 @@
 
     form.addEventListener("submit", function (e) {
       e.preventDefault();
+
+      const apiUrl = (CFG.apiSubmitUrl || "").trim();
+      if (apiUrl && submitBtn && submitBtn.disabled) return;
+
       const protocolo =
         (CFG.protocolPrefix || "ILG") +
         String(Date.now()).slice(-8);
@@ -611,8 +815,11 @@
         resumoBitrix.textContent = "";
       }
 
-      const apiUrl = (CFG.apiSubmitUrl || "").trim();
       if (apiUrl) {
+        resetModalResultado();
+        setFormSubmitting(true);
+        showLoadingCotacao();
+
         enviarApiCotacao(protocolo, dados)
           .then(function (r) {
             if (bitrixPreview) bitrixPreview.textContent = JSON.stringify(r, null, 2);
@@ -620,9 +827,16 @@
               resumoBitrixRow.style.display = "";
               resumoBitrix.textContent = "Negócio ID " + r.bitrixDealId;
             }
+            aplicarResultadoModal(r, null);
+            abrirModalAgradecimento();
           })
           .catch(function (err) {
-            alert(err.message || String(err));
+            aplicarResultadoModal(null, err.message || String(err));
+            abrirModalAgradecimento();
+          })
+          .finally(function () {
+            hideLoadingCotacao();
+            setFormSubmitting(false);
           });
       } else {
         enviarBitrixWebhook(bitrixPayload)
@@ -632,10 +846,14 @@
           .catch(function (err) {
             console.error("[ILG Cotação] Bitrix erro:", err);
           });
+        resetModalResultado();
+        if (modalTitle) modalTitle.textContent = "Obrigado!";
+        if (modalLead) {
+          modalLead.textContent =
+            "Em breve retornamos com sua cotação. Guarde o protocolo abaixo.";
+        }
+        abrirModalAgradecimento();
       }
-
-      modal.classList.add("is-open");
-      modal.setAttribute("aria-hidden", "false");
     });
 
     linkWhats.addEventListener("click", function () {

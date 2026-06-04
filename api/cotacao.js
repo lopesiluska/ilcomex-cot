@@ -5,6 +5,44 @@
 const DEFAULT_WEBHOOK =
   "http://95.216.142.66:5678/webhook/09a2586e-e667-43f3-a071-7c302b84f010";
 
+/** Extrai URL e status de cadastro da resposta do n8n (vários nomes de campo). */
+function extrairMetaWebhook(wr) {
+  let data = wr;
+  if (data == null) return { urlCotacao: null, cadastroRealizado: null };
+  if (typeof data === "string") {
+    try {
+      data = JSON.parse(data);
+    } catch {
+      return { urlCotacao: null, cadastroRealizado: null };
+    }
+  }
+  if (typeof data !== "object") return { urlCotacao: null, cadastroRealizado: null };
+
+  const nested = data.body && typeof data.body === "object" ? data.body : data;
+  const urlCotacao =
+    nested.urlCotacao ||
+    nested.url_cotacao ||
+    nested.cotacaoUrl ||
+    nested.cotacao_url ||
+    nested.url ||
+    nested.link ||
+    data.urlCotacao ||
+    data.url ||
+    null;
+
+  let cadastroRealizado = null;
+  if (typeof nested.cadastroRealizado === "boolean") cadastroRealizado = nested.cadastroRealizado;
+  else if (typeof nested.cadastro_realizado === "boolean") cadastroRealizado = nested.cadastro_realizado;
+  else if (typeof nested.realizado === "boolean") cadastroRealizado = nested.realizado;
+  else if (typeof nested.success === "boolean" && urlCotacao) cadastroRealizado = nested.success;
+  else if (typeof data.success === "boolean") cadastroRealizado = data.success;
+
+  return {
+    urlCotacao: urlCotacao ? String(urlCotacao).trim() : null,
+    cadastroRealizado,
+  };
+}
+
 function readBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
@@ -251,12 +289,16 @@ module.exports = async function handler(req, res) {
 
   console.log(`${tag} << OK 200 protocolo=${protocolo}`);
 
+  const meta = extrairMetaWebhook(upstreamJson !== null ? upstreamJson : text);
+
   return res.end(
     JSON.stringify({
       success: true,
       protocolo,
       webhookStatus: upstream.status,
       webhookResponse: upstreamJson !== null ? upstreamJson : text || null,
+      urlCotacao: meta.urlCotacao,
+      cadastroRealizado: meta.cadastroRealizado,
     })
   );
 }
