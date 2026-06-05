@@ -122,11 +122,11 @@
     };
   }
 
-  const COTACAO_FETCH_TIMEOUT_MS = 300000;
+  const COTACAO_FETCH_TIMEOUT_MS = 480000;
   const LOADING_MSGS = [
     "Estamos registrando sua solicitação e preparando sua cotação.",
     "Calculando pesos e volumes das suas caixas.",
-    "Consultando opções de envio internacional — isso pode levar até 5 minutos.",
+    "Consultando opções de envio internacional — isso pode levar até 8 minutos.",
     "Por favor, não feche esta página. Estamos finalizando o cadastro no sistema.",
     "Quase lá! Aguarde só mais um instante.",
   ];
@@ -200,7 +200,7 @@
     } catch (e) {
       if (e && e.name === "AbortError") {
         throw new Error(
-          "A cotação demorou mais de 5 minutos. Tente novamente ou fale conosco pelo WhatsApp."
+          "A cotação demorou mais de 8 minutos. Tente novamente ou fale conosco pelo WhatsApp."
         );
       }
       throw e;
