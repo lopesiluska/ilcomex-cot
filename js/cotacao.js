@@ -122,19 +122,67 @@
     };
   }
 
-  const COTACAO_FETCH_TIMEOUT_MS = 480000;
+  const COTACAO_FETCH_TIMEOUT_MS = 295000;
   const LOADING_MSGS = [
     "Estamos registrando sua solicitação e preparando sua cotação.",
     "Calculando pesos e volumes das suas caixas.",
-    "Consultando opções de envio internacional — isso pode levar até 8 minutos.",
+    "Consultando opções de envio internacional — isso pode levar até 5 minutos.",
     "Por favor, não feche esta página. Estamos finalizando o cadastro no sistema.",
     "Quase lá! Aguarde só mais um instante.",
   ];
 
-  function extrairResultadoCotacao(apiJson) {
-    if (!apiJson || typeof apiJson !== "object") {
-      return { urlCotacao: null, cadastroRealizado: null };
+  function parseWebhookResponse(wr) {
+    if (wr == null) return null;
+    if (typeof wr === "string") {
+      const trimmed = wr.trim();
+      if (!trimmed) return { _raw: wr };
+      try {
+        return JSON.parse(trimmed);
+      } catch {
+        return { _raw: wr };
+      }
     }
+    if (typeof wr === "object") return wr;
+    return { _raw: wr };
+  }
+
+  function extrairResultadoCotacao(apiJson) {
+    const empty = {
+      urlCotacao: null,
+      cadastroRealizado: null,
+      testeOk: false,
+      webhookValidado: false,
+    };
+    if (!apiJson || typeof apiJson !== "object") return empty;
+
+    if (apiJson.testeOk === true) {
+      return {
+        urlCotacao: apiJson.urlCotacao ? String(apiJson.urlCotacao).trim() : null,
+        cadastroRealizado: true,
+        testeOk: true,
+        webhookValidado: true,
+      };
+    }
+
+    if (apiJson.webhookValidado === true && apiJson.success === true) {
+      const wr = parseWebhookResponse(apiJson.webhookResponse);
+      const nested = wr && wr.body && typeof wr.body === "object" ? wr.body : wr;
+      const testeOk = !!(nested && nested.teste === "ok");
+      return {
+        urlCotacao: apiJson.urlCotacao ? String(apiJson.urlCotacao).trim() : null,
+        cadastroRealizado:
+          typeof apiJson.cadastroRealizado === "boolean"
+            ? apiJson.cadastroRealizado
+            : testeOk
+              ? true
+              : apiJson.success === true
+                ? true
+                : null,
+        testeOk,
+        webhookValidado: true,
+      };
+    }
+
     if (apiJson.urlCotacao != null || apiJson.cadastroRealizado != null) {
       return {
         urlCotacao: apiJson.urlCotacao ? String(apiJson.urlCotacao).trim() : null,
@@ -142,42 +190,47 @@
           typeof apiJson.cadastroRealizado === "boolean"
             ? apiJson.cadastroRealizado
             : null,
+        testeOk: false,
+        webhookValidado: apiJson.success === true,
       };
     }
-    let wr = apiJson.webhookResponse;
-    if (wr == null) return { urlCotacao: null, cadastroRealizado: null };
-    if (typeof wr === "string") {
-      try {
-        wr = JSON.parse(wr);
-      } catch {
-        return { urlCotacao: null, cadastroRealizado: null };
-      }
-    }
-    if (typeof wr !== "object") return { urlCotacao: null, cadastroRealizado: null };
+
+    const wr = parseWebhookResponse(apiJson.webhookResponse);
+    if (wr == null) return empty;
+
     const nested = wr.body && typeof wr.body === "object" ? wr.body : wr;
+    const testeOk = nested && nested.teste === "ok";
     const urlCotacao =
-      nested.urlCotacao ||
-      nested.url_cotacao ||
-      nested.cotacaoUrl ||
-      nested.cotacao_url ||
-      nested.url ||
-      nested.link ||
+      (nested &&
+        (nested.urlCotacao ||
+          nested.url_cotacao ||
+          nested.cotacaoUrl ||
+          nested.cotacao_url ||
+          nested.url ||
+          nested.link)) ||
       wr.urlCotacao ||
       wr.url ||
       null;
+
     let cadastroRealizado = null;
-    if (typeof nested.cadastroRealizado === "boolean") {
+    if (testeOk) cadastroRealizado = true;
+    else if (nested && typeof nested.cadastroRealizado === "boolean") {
       cadastroRealizado = nested.cadastroRealizado;
-    } else if (typeof nested.cadastro_realizado === "boolean") {
+    } else if (nested && typeof nested.cadastro_realizado === "boolean") {
       cadastroRealizado = nested.cadastro_realizado;
-    } else if (typeof nested.realizado === "boolean") {
+    } else if (nested && typeof nested.realizado === "boolean") {
       cadastroRealizado = nested.realizado;
     } else if (typeof wr.success === "boolean") {
       cadastroRealizado = wr.success;
+    } else if (apiJson.success === true) {
+      cadastroRealizado = true;
     }
+
     return {
       urlCotacao: urlCotacao ? String(urlCotacao).trim() : null,
       cadastroRealizado,
+      testeOk: !!testeOk,
+      webhookValidado: apiJson.success === true,
     };
   }
 
@@ -200,7 +253,7 @@
     } catch (e) {
       if (e && e.name === "AbortError") {
         throw new Error(
-          "A cotação demorou mais de 8 minutos. Tente novamente ou fale conosco pelo WhatsApp."
+          "A cotação demorou mais de 5 minutos. Tente novamente ou fale conosco pelo WhatsApp."
         );
       }
       throw e;
@@ -605,7 +658,17 @@
       const cadastroOk = meta.cadastroRealizado === true;
       const cadastroFalhou = meta.cadastroRealizado === false;
 
-      if (cadastroOk) {
+      if (meta.testeOk) {
+        if (modalTitle) modalTitle.textContent = "Integração validada!";
+        if (modalLead) {
+          modalLead.textContent =
+            "O webhook respondeu corretamente. Sua solicitação foi registrada.";
+        }
+        if (resumoCadastroRow && resumoCadastroTexto) {
+          resumoCadastroRow.hidden = false;
+          resumoCadastroTexto.textContent = 'Webhook OK — resposta: { "teste": "ok" }';
+        }
+      } else if (cadastroOk) {
         if (modalTitle) modalTitle.textContent = "Cotação registrada!";
         if (modalLead) {
           modalLead.textContent =
@@ -629,6 +692,16 @@
         if (modalIconWrap) {
           modalIconWrap.className = "modal__success modal__success--err";
           modalIconWrap.innerHTML = '<i class="ri-error-warning-line"></i>';
+        }
+      } else if (meta.webhookValidado) {
+        if (modalTitle) modalTitle.textContent = "Solicitação enviada!";
+        if (modalLead) {
+          modalLead.textContent =
+            "Recebemos a confirmação do webhook. Em breve retornamos com sua cotação.";
+        }
+        if (resumoCadastroRow && resumoCadastroTexto) {
+          resumoCadastroRow.hidden = false;
+          resumoCadastroTexto.textContent = "Webhook respondeu com sucesso.";
         }
       } else {
         if (modalTitle) modalTitle.textContent = "Obrigado!";

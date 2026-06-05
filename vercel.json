@@ -2,7 +2,7 @@
   "rewrites": [{ "source": "/", "destination": "/cotacao.html" }],
   "functions": {
     "api/cotacao.js": {
-      "maxDuration": 480
+      "maxDuration": 300
     }
   }
 }
