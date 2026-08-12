@@ -8,6 +8,20 @@
   var CFG = window.ILG_DECLARACAO_CONFIG || {};
   var FATOR_CUBAGEM = 6000;
 
+  function getIdCotacaoFromUrl() {
+    try {
+      var params = new URLSearchParams(window.location.search || "");
+      var id =
+        params.get("id") ||
+        params.get("idCotacao") ||
+        params.get("cotacaoId") ||
+        "";
+      return String(id || "").trim();
+    } catch (e) {
+      return "";
+    }
+  }
+
   function onlyDigits(s) {
     return String(s || "").replace(/\D/g, "");
   }
@@ -1072,6 +1086,12 @@
     var form = document.getElementById("declaracaoForm");
     var xmlGerado = "";
     var protocoloAtual = "";
+    var idCotacao = getIdCotacaoFromUrl();
+    var idDisplay = document.getElementById("idCotacaoDisplay");
+    if (idDisplay) {
+      idDisplay.textContent = idCotacao || "(não informado na URL)";
+    }
+
 
     document
       .querySelectorAll("#remessaTable tbody tr")
@@ -1332,6 +1352,14 @@
       var apiUrl = (CFG.apiSubmitUrl || "").trim();
       var bitrixPayload = buildBitrixPayload(dados, protocoloAtual, xmlGerado);
       if (apiUrl) {
+        if (!idCotacao) {
+          alert(
+            "ID da cotação ausente.\n\n" +
+              "Abra esta página com o id do 1º formulário na URL, por exemplo:\n" +
+              "declaracao-conteudo.html?id=166042"
+          );
+          return;
+        }
         if (window.location && window.location.protocol === "file:") {
           alert(
             "Você está abrindo o arquivo via file://.\n\n" +
@@ -1350,6 +1378,7 @@
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 tipoFormulario: "declaracao",
+                id: idCotacao,
                 protocolo: protocoloAtual,
                 dados: dados,
                 xmlGerado: xmlGerado,
@@ -1403,7 +1432,12 @@
       var preview = document.getElementById("bitrixPreviewDeclaracao");
       if (preview) {
         preview.textContent = JSON.stringify(
-          { protocolo: protocoloAtual, dados: dados, bitrix: bitrixPayload },
+          {
+            id: idCotacao || null,
+            protocolo: protocoloAtual,
+            dados: dados,
+            bitrix: bitrixPayload,
+          },
           null,
           2
         );

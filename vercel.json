@@ -3,6 +3,9 @@
   "functions": {
     "api/cotacao.js": {
       "maxDuration": 300
+    },
+    "api/declaracao.js": {
+      "maxDuration": 300
     }
   }
 }

@@ -15,7 +15,7 @@
       protocolPrefix: "ILG-DC",
       whatsappE164: "5562998666000",
       whatsappMessageTemplate: "Olá! Minha declaração de conteúdo é {protocolo}.",
-      // Na Vercel: "/api/declaracao" (JSON + fotos base64). Vazio = só pré-visualização / webhook direto no navegador.
+      // Na Vercel: "/api/declaracao". O id da cotação (1º formulário) vem de ?id= na URL.
       apiSubmitUrl: "/api/declaracao",
       bitrixInboundWebhookUrl: "",
       bitrixEntityType: "DEAL",
@@ -378,8 +378,9 @@
       </div>
 
       <aside class="side-card" aria-label="Integração Bitrix">
-        <h3>Bitrix / JSON</h3>
-        <p>Com <code>apiSubmitUrl</code> (<code>/api/declaracao</code> na Vercel), o servidor repassa JSON (e fotos em base64) ao webhook. Sem API, use <code>bitrixInboundWebhookUrl</code> (POST direto; exige CORS).</p>
+        <h3>Webhook / JSON</h3>
+        <p>Envia ao n8n o payload de remetente/destinatário com o <code>id</code> da cotação (<code>?id=</code> na URL, vindo do 1º formulário).</p>
+        <p class="field-hint" id="idCotacaoHint" style="margin-top:0.5rem">ID cotação: <strong id="idCotacaoDisplay">—</strong></p>
         <pre id="bitrixPreviewDeclaracao" aria-label="Pré-visualização">{}</pre>
       </aside>
     </div>
