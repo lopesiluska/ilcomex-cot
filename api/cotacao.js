@@ -5,25 +5,49 @@
 const DEFAULT_WEBHOOK =
   "http://95.216.142.66:5678/webhook/09a2586e-e667-43f3-a071-7c302b84f010";
 
-/** Extrai metadados da resposta do n8n (URL, cadastro, validação teste ok). */
+/** Extrai metadados da resposta do n8n (URL, id, cadastro, validação teste ok). */
 function extrairMetaWebhook(wr) {
   let data = wr;
   if (data == null) {
-    return { urlCotacao: null, cadastroRealizado: null, testeOk: false, webhookValidado: false };
+    return {
+      urlCotacao: null,
+      idCotacao: null,
+      cadastroRealizado: null,
+      testeOk: false,
+      webhookValidado: false,
+    };
   }
   if (typeof data === "string") {
     const trimmed = data.trim();
     if (!trimmed) {
-      return { urlCotacao: null, cadastroRealizado: null, testeOk: false, webhookValidado: true };
+      return {
+        urlCotacao: null,
+        idCotacao: null,
+        cadastroRealizado: null,
+        testeOk: false,
+        webhookValidado: true,
+      };
     }
     try {
       data = JSON.parse(trimmed);
     } catch {
-      return { urlCotacao: null, cadastroRealizado: null, testeOk: false, webhookValidado: true };
+      return {
+        urlCotacao: null,
+        idCotacao: null,
+        cadastroRealizado: null,
+        testeOk: false,
+        webhookValidado: true,
+      };
     }
   }
   if (typeof data !== "object") {
-    return { urlCotacao: null, cadastroRealizado: null, testeOk: false, webhookValidado: true };
+    return {
+      urlCotacao: null,
+      idCotacao: null,
+      cadastroRealizado: null,
+      testeOk: false,
+      webhookValidado: true,
+    };
   }
 
   const nested = data.body && typeof data.body === "object" ? data.body : data;
@@ -40,16 +64,47 @@ function extrairMetaWebhook(wr) {
     data.url ||
     null;
 
+  const rawId =
+    nested.id ??
+    nested.id_cotacao ??
+    nested.idCotacao ??
+    nested.cotacaoId ??
+    data.id ??
+    null;
+  let idCotacao =
+    rawId != null && String(rawId).trim() !== "" ? String(rawId).trim() : null;
+
+  // Fallback: extrai id_cotacao= da própria URL
+  if (!idCotacao && urlCotacao) {
+    try {
+      const u = new URL(String(urlCotacao));
+      idCotacao =
+        u.searchParams.get("id_cotacao") ||
+        u.searchParams.get("id") ||
+        null;
+    } catch {
+      /* ignore */
+    }
+  }
+
   let cadastroRealizado = null;
   if (testeOk) cadastroRealizado = true;
-  else if (typeof nested.cadastroRealizado === "boolean") cadastroRealizado = nested.cadastroRealizado;
-  else if (typeof nested.cadastro_realizado === "boolean") cadastroRealizado = nested.cadastro_realizado;
-  else if (typeof nested.realizado === "boolean") cadastroRealizado = nested.realizado;
-  else if (typeof nested.success === "boolean" && urlCotacao) cadastroRealizado = nested.success;
+  else if (typeof nested.cadastroRealizado === "boolean")
+    cadastroRealizado = nested.cadastroRealizado;
+  else if (typeof nested.cadastro_realizado === "boolean")
+    cadastroRealizado = nested.cadastro_realizado;
+  else if (typeof nested.realizado === "boolean")
+    cadastroRealizado = nested.realizado;
+  else if (typeof nested.success === "boolean" && urlCotacao)
+    cadastroRealizado = nested.success;
   else if (typeof data.success === "boolean") cadastroRealizado = data.success;
+  // Resposta real do n8n: { id, link } → cadastro confirmado
+  else if (idCotacao && urlCotacao) cadastroRealizado = true;
+  else if (idCotacao || urlCotacao) cadastroRealizado = true;
 
   return {
     urlCotacao: urlCotacao ? String(urlCotacao).trim() : null,
+    idCotacao,
     cadastroRealizado,
     testeOk,
     webhookValidado: true,
@@ -311,6 +366,8 @@ module.exports = async function handler(req, res) {
       webhookStatus: upstream.status,
       webhookResponse: upstreamJson !== null ? upstreamJson : text || null,
       urlCotacao: meta.urlCotacao,
+      id: meta.idCotacao,
+      idCotacao: meta.idCotacao,
       cadastroRealizado: meta.cadastroRealizado,
       testeOk: meta.testeOk,
       webhookValidado: meta.webhookValidado,

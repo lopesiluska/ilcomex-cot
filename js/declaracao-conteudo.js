@@ -13,6 +13,7 @@
       var params = new URLSearchParams(window.location.search || "");
       var id =
         params.get("id") ||
+        params.get("id_cotacao") ||
         params.get("idCotacao") ||
         params.get("cotacaoId") ||
         "";
@@ -1322,7 +1323,7 @@
         (CFG.protocolPrefix || "ILG-DC") + String(Date.now()).slice(-8);
       xmlGerado = gerarXMLNFe(dados);
 
-      function finalizarUi(protocolo, dealId) {
+      function finalizarUi(protocolo, dealId, apiJson) {
         preencherResumo(dados, protocolo);
         var wa = CFG.whatsappE164 || "5562998666000";
         var tpl =
@@ -1334,6 +1335,20 @@
           onlyDigits(wa) +
           "&text=" +
           encodeURIComponent(msg);
+
+        var statusEl = document.getElementById("resumoStatusLine");
+        var statusTxt = document.getElementById("resumoStatusTexto");
+        if (statusEl && statusTxt) {
+          var idUsado =
+            (apiJson && (apiJson.id || apiJson.idCotacao)) || idCotacao || "";
+          statusTxt.textContent = idUsado
+            ? "Declaração enviada com sucesso. Vinculada à cotação ID " +
+              idUsado +
+              "."
+            : "Declaração enviada com sucesso.";
+          statusEl.classList.remove("is-hidden");
+        }
+
         var rb = document.getElementById("resumoBitrixLine");
         if (rb) {
           if (dealId) {
@@ -1416,7 +1431,7 @@
                 json.webhookResponse.id ||
                 null;
             }
-            finalizarUi(json.protocolo || protocoloAtual, dealId);
+            finalizarUi(json.protocolo || protocoloAtual, dealId, json);
           })
           .catch(function (err) {
             var msg = err && err.message ? err.message : String(err);

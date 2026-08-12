@@ -146,18 +146,59 @@
     return { _raw: wr };
   }
 
+  function extrairIdCotacao(apiJson, wr) {
+    if (apiJson) {
+      const top =
+        apiJson.idCotacao ?? apiJson.id_cotacao ?? apiJson.id ?? null;
+      if (top != null && String(top).trim() !== "") return String(top).trim();
+    }
+    const nested =
+      wr && wr.body && typeof wr.body === "object" ? wr.body : wr;
+    if (nested && typeof nested === "object") {
+      const fromWr =
+        nested.id ?? nested.id_cotacao ?? nested.idCotacao ?? nested.cotacaoId;
+      if (fromWr != null && String(fromWr).trim() !== "")
+        return String(fromWr).trim();
+    }
+    const url =
+      (apiJson && apiJson.urlCotacao) ||
+      (nested && (nested.link || nested.url)) ||
+      null;
+    if (url) {
+      try {
+        const u = new URL(String(url));
+        return (
+          u.searchParams.get("id_cotacao") ||
+          u.searchParams.get("id") ||
+          null
+        );
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }
+
   function extrairResultadoCotacao(apiJson) {
     const empty = {
       urlCotacao: null,
+      idCotacao: null,
       cadastroRealizado: null,
       testeOk: false,
       webhookValidado: false,
     };
     if (!apiJson || typeof apiJson !== "object") return empty;
 
+    const wr = parseWebhookResponse(apiJson.webhookResponse);
+    const idCotacao = extrairIdCotacao(apiJson, wr);
+    const urlFromApi = apiJson.urlCotacao
+      ? String(apiJson.urlCotacao).trim()
+      : null;
+
     if (apiJson.testeOk === true) {
       return {
-        urlCotacao: apiJson.urlCotacao ? String(apiJson.urlCotacao).trim() : null,
+        urlCotacao: urlFromApi,
+        idCotacao,
         cadastroRealizado: true,
         testeOk: true,
         webhookValidado: true,
@@ -165,37 +206,47 @@
     }
 
     if (apiJson.webhookValidado === true && apiJson.success === true) {
-      const wr = parseWebhookResponse(apiJson.webhookResponse);
       const nested = wr && wr.body && typeof wr.body === "object" ? wr.body : wr;
       const testeOk = !!(nested && nested.teste === "ok");
+      let cadastroRealizado =
+        typeof apiJson.cadastroRealizado === "boolean"
+          ? apiJson.cadastroRealizado
+          : null;
+      if (cadastroRealizado == null) {
+        if (testeOk || idCotacao || urlFromApi || apiJson.success === true) {
+          cadastroRealizado = true;
+        }
+      }
       return {
-        urlCotacao: apiJson.urlCotacao ? String(apiJson.urlCotacao).trim() : null,
-        cadastroRealizado:
-          typeof apiJson.cadastroRealizado === "boolean"
-            ? apiJson.cadastroRealizado
-            : testeOk
-              ? true
-              : apiJson.success === true
-                ? true
-                : null,
+        urlCotacao: urlFromApi,
+        idCotacao,
+        cadastroRealizado,
         testeOk,
         webhookValidado: true,
       };
     }
 
-    if (apiJson.urlCotacao != null || apiJson.cadastroRealizado != null) {
+    if (
+      apiJson.urlCotacao != null ||
+      apiJson.cadastroRealizado != null ||
+      idCotacao
+    ) {
+      let cadastroRealizado =
+        typeof apiJson.cadastroRealizado === "boolean"
+          ? apiJson.cadastroRealizado
+          : null;
+      if (cadastroRealizado == null && (idCotacao || urlFromApi)) {
+        cadastroRealizado = true;
+      }
       return {
-        urlCotacao: apiJson.urlCotacao ? String(apiJson.urlCotacao).trim() : null,
-        cadastroRealizado:
-          typeof apiJson.cadastroRealizado === "boolean"
-            ? apiJson.cadastroRealizado
-            : null,
+        urlCotacao: urlFromApi,
+        idCotacao,
+        cadastroRealizado,
         testeOk: false,
         webhookValidado: apiJson.success === true,
       };
     }
 
-    const wr = parseWebhookResponse(apiJson.webhookResponse);
     if (wr == null) return empty;
 
     const nested = wr.body && typeof wr.body === "object" ? wr.body : wr;
@@ -222,16 +273,28 @@
       cadastroRealizado = nested.realizado;
     } else if (typeof wr.success === "boolean") {
       cadastroRealizado = wr.success;
-    } else if (apiJson.success === true) {
+    } else if (idCotacao || urlCotacao || apiJson.success === true) {
       cadastroRealizado = true;
     }
 
     return {
       urlCotacao: urlCotacao ? String(urlCotacao).trim() : null,
+      idCotacao,
       cadastroRealizado,
       testeOk: !!testeOk,
       webhookValidado: apiJson.success === true,
     };
+  }
+
+  function buildDeclaracaoUrl(idCotacao) {
+    if (!idCotacao) return null;
+    try {
+      const u = new URL("declaracao-conteudo.html", window.location.href);
+      u.searchParams.set("id", String(idCotacao));
+      return u.href;
+    } catch {
+      return "declaracao-conteudo.html?id=" + encodeURIComponent(String(idCotacao));
+    }
   }
 
   async function enviarApiCotacao(protocolo, dados) {
@@ -590,6 +653,9 @@
     const resumoCadastroErroTexto = document.getElementById("resumoCadastroErroTexto");
     const resumoUrlCotacaoRow = document.getElementById("resumoUrlCotacaoRow");
     const resumoUrlCotacao = document.getElementById("resumoUrlCotacao");
+    const resumoUrlDeclaracaoRow = document.getElementById("resumoUrlDeclaracaoRow");
+    const resumoUrlDeclaracao = document.getElementById("resumoUrlDeclaracao");
+    const resumoIdCotacaoHint = document.getElementById("resumoIdCotacaoHint");
 
     let loadingMsgTimer = null;
     let loadingMsgIndex = 0;
@@ -632,6 +698,8 @@
       if (resumoCadastroRow) resumoCadastroRow.hidden = true;
       if (resumoCadastroErroRow) resumoCadastroErroRow.hidden = true;
       if (resumoUrlCotacaoRow) resumoUrlCotacaoRow.hidden = true;
+      if (resumoUrlDeclaracaoRow) resumoUrlDeclaracaoRow.hidden = true;
+      if (resumoIdCotacaoHint) resumoIdCotacaoHint.textContent = "";
       if (modalIconWrap) {
         modalIconWrap.className = "modal__success";
         modalIconWrap.innerHTML = '<i class="ri-check-line"></i>';
@@ -655,8 +723,11 @@
       }
 
       const meta = extrairResultadoCotacao(apiJson);
-      const cadastroOk = meta.cadastroRealizado === true;
-      const cadastroFalhou = meta.cadastroRealizado === false;
+      const temIdOuLink = !!(meta.idCotacao || meta.urlCotacao);
+      const cadastroOk =
+        meta.cadastroRealizado === true ||
+        (meta.cadastroRealizado !== false && temIdOuLink);
+      const cadastroFalhou = meta.cadastroRealizado === false && !temIdOuLink;
 
       if (meta.testeOk) {
         if (modalTitle) modalTitle.textContent = "Integração validada!";
@@ -671,12 +742,15 @@
       } else if (cadastroOk) {
         if (modalTitle) modalTitle.textContent = "Cotação registrada!";
         if (modalLead) {
-          modalLead.textContent =
-            "Seu cadastro foi realizado com sucesso. Confira o link da cotação abaixo.";
+          modalLead.textContent = meta.idCotacao
+            ? "Cadastro realizado com sucesso. Continue com a declaração de conteúdo pelo link abaixo."
+            : "Seu cadastro foi realizado com sucesso. Confira o link da cotação abaixo.";
         }
         if (resumoCadastroRow && resumoCadastroTexto) {
           resumoCadastroRow.hidden = false;
-          resumoCadastroTexto.textContent = "Cadastro realizado com sucesso.";
+          resumoCadastroTexto.textContent = meta.idCotacao
+            ? "Cadastro realizado com sucesso. ID da cotação: " + meta.idCotacao
+            : "Cadastro realizado com sucesso.";
         }
       } else if (cadastroFalhou) {
         if (modalTitle) modalTitle.textContent = "Solicitação recebida";
@@ -715,6 +789,17 @@
         resumoUrlCotacaoRow.hidden = false;
         resumoUrlCotacao.href = meta.urlCotacao;
         resumoUrlCotacao.textContent = meta.urlCotacao;
+      }
+
+      const declaracaoHref = buildDeclaracaoUrl(meta.idCotacao);
+      if (declaracaoHref && resumoUrlDeclaracaoRow && resumoUrlDeclaracao) {
+        resumoUrlDeclaracaoRow.hidden = false;
+        resumoUrlDeclaracao.href = declaracaoHref;
+        resumoUrlDeclaracao.textContent = "Abrir declaração de conteúdo";
+        if (resumoIdCotacaoHint) {
+          resumoIdCotacaoHint.textContent =
+            "O ID " + meta.idCotacao + " será enviado automaticamente no segundo formulário.";
+        }
       }
     }
 
