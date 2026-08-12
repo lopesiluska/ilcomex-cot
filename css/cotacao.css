@@ -607,6 +607,12 @@ input[type="number"]::-webkit-inner-spin-button {
   margin-bottom: 1rem;
 }
 
+/* display:flex acima sobrescreve o UA [hidden]; forçar ocultar */
+.resumo-status[hidden],
+.resumo-link-box[hidden] {
+  display: none !important;
+}
+
 .resumo-status--ok {
   background: #dcfce7;
   color: #166534;
